@@ -1,0 +1,19 @@
+.element {
+  /* @apply inline-block px-1 py-[3px]; */
+  padding: 3px 0.25em;
+  display: inline-block;
+}
+
+.link {
+  @apply element;
+  @apply underline text-blue-900;
+}
+
+.current {
+  @apply element;
+  @apply font-bold;
+}
+
+.gap {
+  @apply element;
+}

@@ -1,4 +1,9 @@
-@tailwind base;
+@import '@mantine/dates/styles.css';
+  @import '@mantine/core/styles.css';
+
+  @layer tailwind {
+    @tailwind base;
+  }
 @tailwind components;
 @tailwind utilities;
 
