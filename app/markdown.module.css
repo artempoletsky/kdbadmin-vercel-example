@@ -1,0 +1,17 @@
+
+.markdown h2 {
+  @apply mb-3 font-bold;
+  font-size: 26px;
+}
+
+.markdown p {
+  @apply mb-3;
+}
+
+.markdown a {
+  @apply text-indigo-700 underline;
+}
+
+.markdown a {
+  @apply text-indigo-700 underline;
+}

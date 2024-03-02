@@ -3,7 +3,7 @@
 
 
 export async function isAdmin(): Promise<boolean> {
-
+  return true;
 }
 
 
