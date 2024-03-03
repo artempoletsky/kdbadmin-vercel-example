@@ -1,7 +1,7 @@
 
 import EditTableScheme from "./EditTableScheme"
-import { getScheme } from "../../api/route"
-import Layout, { BreadrumbsArray } from "../../comp/layout"
+import { getScheme } from "../../api/methods"
+import Layout, { BreadrumbsArray } from "../../comp/PageLayout"
 
 
 type Payload = {
@@ -11,7 +11,9 @@ type Props = {
   params: Payload
 }
 
-export default async function ({ params }: Props) {
+export const dynamic = "force-dynamic";
+
+export default async function page({ params }: Props) {
   const { tableName } = params;
   const scheme = await getScheme(params);
   const crumbs: BreadrumbsArray = [

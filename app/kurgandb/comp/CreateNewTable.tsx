@@ -3,7 +3,7 @@
 import { Button, Checkbox, Select, Tooltip } from "@mantine/core";
 import TextInput from "./TextInput";
 import { getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
-import type { FCreateTable } from "../api/route";
+import type { FCreateTable } from "../api/methods";
 import { useState } from "react";
 import CheckboxTooltip from "./CheckboxTooltip";
 import RequestError from "./RequestError";

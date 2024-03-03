@@ -1,19 +1,31 @@
 
-import { queryUniversal as query } from "@artempoletsky/kurgandb";
-import Layout from "./comp/layout";
+import Layout from "./comp/PageLayout";
 import CreateNewTable from "./comp/CreateNewTable";
-import { ROOT_PATH } from "./generated";
+import { API_ENDPOINT, ROOT_PATH } from "./generated";
 import Link from "./comp/Link";
+import { getAllTables, type FGetAllTables } from "./api/methods";
+import { getAPIMethod } from "@artempoletsky/easyrpc/client";
+
+import { headers, cookies } from 'next/headers'
 
 
+// const hrs = headers();
 
+// console.log(hrs.get("host"));
+// console.log(hrs.get("protocol"));
+// console.log(cookies());
 
-export default async function () {
+// const getAllTables = getAPIMethod<FGetAllTables>("http://" + hrs.get("host") + API_ENDPOINT, "getAllTables", {
+//   cache: "no-cache"
+// });
 
-  const tableNames: string[] = await query(({ }, { }, { db }) => {
-    const tables = db.getTables();
-    return Object.keys(tables);
-  }, {});
+// export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";
+
+export default async function page() {
+
+  const tableNames: string[] = await getAllTables({});
 
   return (
     <Layout>

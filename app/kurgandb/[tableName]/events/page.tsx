@@ -1,12 +1,6 @@
 
-import { getScheme } from "../../api/route";
-import Layout, { BreadrumbsArray } from "../../comp/layout";
 
-// import type { FGetScheme, FReadDocument } from "../api/route";
-
-import { TableScheme } from "@artempoletsky/kurgandb/table";
-
-
+import Layout, { BreadrumbsArray } from "../../comp/PageLayout";
 
 
 type Payload = {
@@ -16,23 +10,9 @@ type Props = {
   params: Payload
 }
 
-type QueryReturn = false | {
-  ids: string[]
-  scheme: any
-  pagesCount: number
-}
-
-export default async function ({ params }: Props) {
+export default async function page({ params }: Props) {
   const { tableName } = params;
-  let scheme: TableScheme | undefined;
-  try {
-    scheme = await getScheme({
-      tableName
-    });
-  } catch (error) {
-    console.log(error);
-  }
-
+  
   const crumbs: BreadrumbsArray = [
     { href: "/", title: "Tables" },
     { href: `/${tableName}/`, title: tableName },

@@ -4,14 +4,14 @@ import type { TableScheme } from "@artempoletsky/kurgandb/table";
 // import Button from "./Button";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FCreateDocument, FDeleteDocument, FUpdateDocument } from "../api/route";
+import type { FCreateDocument, FDeleteDocument, FUpdateDocument } from "../api/methods";
 
 import FieldLabel from "../comp/FieldLabel";
 import { ActionIcon, Button, Checkbox, CloseButton, Menu, MenuTarget, Modal, TextInput, Textarea, Tooltip } from "@mantine/core";
 import { API_ENDPOINT } from "../generated";
 import { blinkBoolean } from "../utils_client";
 import { $, FieldTag, FieldType, PlainObject } from "@artempoletsky/kurgandb/globals";
-import { ValidationErrorResponse } from "@artempoletsky/easyrpc/client";
+import { JSONErrorResponse } from "@artempoletsky/easyrpc/client";
 
 import { fieldScripts } from "../../kurgandb_admin/field_scripts";
 import { ScriptsRecord, formatCamelCase } from "../globals";
@@ -35,7 +35,7 @@ type Props = {
   onCreated: (id: string | number) => void
   onDeleted: () => void
   onDuplicate: () => void
-  onRequestError: (e: ValidationErrorResponse) => void
+  onRequestError: (e: JSONErrorResponse) => void
   onClose: () => void
 };
 

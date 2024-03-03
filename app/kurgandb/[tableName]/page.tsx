@@ -1,8 +1,8 @@
 
-import Layout, { BreadrumbsArray } from "../comp/layout";
+import Layout, { BreadrumbsArray } from "../comp/PageLayout";
 
 // import type { FGetScheme, FReadDocument } from "../api/route";
-import { getScheme } from "../api/route";
+import { getScheme } from "../api/methods";
 import { TableScheme } from "@artempoletsky/kurgandb/table";
 import EditTable from "./EditTable";
 
@@ -21,7 +21,10 @@ type QueryReturn = false | {
   pagesCount: number
 }
 
-export default async function ({ params }: Props) {
+export const dynamic = "force-dynamic";
+
+
+export default async function page({ params }: Props) {
   const { tableName } = params;
   let scheme: TableScheme | undefined;
   try {
@@ -29,7 +32,7 @@ export default async function ({ params }: Props) {
       tableName
     });
   } catch (error) {
-    console.log(error);
+    // console.log(error);
   }
 
   const crumbs: BreadrumbsArray = [
@@ -41,7 +44,7 @@ export default async function ({ params }: Props) {
     <Layout breadcrumbs={crumbs} tableName={tableName}>
       {scheme
         ? <EditTable tableName={tableName} scheme={scheme} page={1}></EditTable>
-        : <div>Table '{tableName}' doesn't exist</div>
+        : <div>Table &#39;{tableName}&#39; doesn&#39;t exist</div>
       }
     </Layout>
   );

@@ -2,7 +2,7 @@
 import type { TableScheme } from "@artempoletsky/kurgandb/table";
 import { ReactNode, useState } from "react";
 import { getAPIMethod, JSONErrorResponse } from "@artempoletsky/easyrpc/client";
-import type { FAddField, FChangeFieldIndex, FRemoveField, FRenameField, FToggleTag } from "../../api/route";
+import type { FAddField, FChangeFieldIndex, FRemoveField, FRenameField, FToggleTag } from "../../api/methods";
 import FieldLabel from "../../comp/FieldLabel";
 import { ActionIcon, Button, Select, Tooltip } from "@mantine/core";
 import { FieldTag } from "@artempoletsky/kurgandb/globals";

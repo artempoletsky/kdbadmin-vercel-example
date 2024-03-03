@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import type { ScriptsLogRecord } from "../api/route";
+import type { ScriptsLogRecord } from "../api/methods";
 
 type Props = {
   log: ScriptsLogRecord[]

@@ -144,3 +144,6 @@ export const executeScript = z.object({
   path: ZStringNonEmpty,
 });
 export type AExecuteScript = z.infer<typeof executeScript>;
+
+
+export const getAllTables = ZEmpty;

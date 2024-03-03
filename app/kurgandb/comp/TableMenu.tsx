@@ -4,7 +4,7 @@ import { getAPIMethod } from "@artempoletsky/easyrpc/client";
 import { ActionIcon, Button, Tooltip } from "@mantine/core";
 import Link from "next/link";
 import { API_ENDPOINT, ROOT_PATH } from "../generated";
-import type { FRemoveTable } from "../api/route";
+import type { FRemoveTable } from "../api/methods";
 
 import { AirBalloon, Alarm, Asset, Edit, FileDatabase, Trash, ZoomExclamation } from 'tabler-icons-react';
 import { ReactNode } from "react";

@@ -3,7 +3,7 @@
 import { Button, TextInput } from "@mantine/core";
 import { API_ENDPOINT } from "../generated";
 import { getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FExecuteScript, ScriptsLogRecord } from "../api/route";
+import type { FExecuteScript, ScriptsLogRecord } from "../api/methods";
 import { useRef } from "react";
 
 const executeScript = getAPIMethod<FExecuteScript>(API_ENDPOINT, "executeScript");

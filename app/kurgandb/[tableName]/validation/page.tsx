@@ -1,6 +1,6 @@
 
-import { getScheme } from "../../api/route";
-import Layout, { BreadrumbsArray } from "../../comp/layout";
+import { getScheme } from "../../api/methods";
+import Layout, { BreadrumbsArray } from "../../comp/PageLayout";
 
 // import type { FGetScheme, FReadDocument } from "../api/route";
 
@@ -16,13 +16,11 @@ type Props = {
   params: Payload
 }
 
-type QueryReturn = false | {
-  ids: string[]
-  scheme: any
-  pagesCount: number
-}
 
-export default async function ({ params }: Props) {
+export const dynamic = "force-dynamic";
+
+
+export default async function page({ params }: Props) {
   const { tableName } = params;
   let scheme: TableScheme | undefined;
   try {

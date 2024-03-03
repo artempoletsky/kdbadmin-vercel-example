@@ -1,11 +1,9 @@
 
-import { getScheme } from "../../api/route";
-import Layout, { BreadrumbsArray } from "../../comp/layout";
+import { getSchemeSafe } from "../../api/methods";
+import Layout, { BreadrumbsArray } from "../../comp/PageLayout";
 
-// import type { FGetScheme, FReadDocument } from "../api/route";
-
-import { TableScheme } from "@artempoletsky/kurgandb/table";
 import CustomComponentPage from "./CustomComponentPage";
+import TableNotFound from "../TableNotFound";
 
 
 type Payload = {
@@ -16,17 +14,11 @@ type Props = {
 }
 
 
-export default async function ({ params }: Props) {
+export default async function page({ params }: Props) {
   const { tableName } = params;
-  let scheme: TableScheme;
-  try {
-    scheme = await getScheme({
-      tableName
-    });
-  } catch (err: any) {
-    console.log(err);
-    return err.message;
-  }
+  const scheme = await getSchemeSafe({
+    tableName
+  });
 
   const crumbs: BreadrumbsArray = [
     { href: "/", title: "Tables" },
@@ -36,7 +28,10 @@ export default async function ({ params }: Props) {
 
   return (
     <Layout breadcrumbs={crumbs} tableName={tableName}>
-      <CustomComponentPage scheme={scheme} tableName={tableName} />
+      {scheme ?
+        <CustomComponentPage scheme={scheme} tableName={tableName} />
+        : <TableNotFound tableName={tableName} />
+      }
     </Layout>
   );
 }

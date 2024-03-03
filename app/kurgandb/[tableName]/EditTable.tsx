@@ -2,15 +2,15 @@
 
 import Paginator from "../comp/paginator";
 import EditDocumentForm from "./EditDocumentForm";
-import { useEffect, useState } from "react";
-import type { FGetDraft, FGetFreeId, FGetPage, FGetScheme, FReadDocument, FRemoveTable, RGetPage } from "../api/route";
-import { ValidationErrorResponse, getAPIMethod } from "@artempoletsky/easyrpc/client";
+import { useCallback, useEffect, useState } from "react";
+import type { FGetDraft, FGetFreeId, FGetPage, FReadDocument, RGetPage } from "../api/methods";
+import { getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
 import type { TableScheme } from "@artempoletsky/kurgandb/table";
 import { Button, Textarea } from "@mantine/core";
 import RequestError from "../comp/RequestError";
 import { API_ENDPOINT } from "../generated";
 
-import TableMenu from "../comp/TableMenu";
+
 import { PlainObject } from "@artempoletsky/kurgandb/globals";
 
 
@@ -29,7 +29,7 @@ type Props = {
 }
 
 
-export default function ({ tableName, scheme }: Props) {
+export default function EditTable({ tableName, scheme }: Props) {
 
 
   let [record, setRecord] = useState<PlainObject | undefined>(undefined);
@@ -38,7 +38,8 @@ export default function ({ tableName, scheme }: Props) {
   let [page, setPage] = useState<number>(1);
   let [queryString, setQueryString] = useState<string>("table.all()");
   let [insertMode, setInsertMode] = useState<boolean>(false);
-  const [requestError, setRequestError] = useState<ValidationErrorResponse | undefined>(undefined);
+
+  const [setRequestError, , requestError] = useErrorResponse();
 
 
   let primaryKey = Object.keys(scheme.tags).find(id => {
@@ -48,7 +49,7 @@ export default function ({ tableName, scheme }: Props) {
   let autoincId = scheme.tags[primaryKey].includes("autoinc");
 
   function openRecord(id: string | number) {
-    setRequestError(undefined);
+    setRequestError();
     setCurrentId(id);
     readDocument({
       tableName,
@@ -60,8 +61,8 @@ export default function ({ tableName, scheme }: Props) {
       .catch(setRequestError);
   }
 
-  function loadPage(page: number) {
-    setRequestError(undefined);
+  const loadPage = useCallback((page: number) => {
+    setRequestError();
     setRecord(undefined);
     setPage(page);
     getPage({
@@ -70,11 +71,14 @@ export default function ({ tableName, scheme }: Props) {
       tableName
     }).then(setPageData)
       .catch(setRequestError);
-  }
+  }, [queryString, tableName, setRequestError])
+  // function loadPage() {
+
+  // }
 
   function insert() {
     // setInsertMode(true);
-    setRequestError(undefined);
+    setRequestError();
     getDraft({ tableName })
       .then((draft) => {
         setRecord(draft);
@@ -96,7 +100,7 @@ export default function ({ tableName, scheme }: Props) {
       setInsertMode(true);
       return;
     }
-    setRequestError(undefined);
+    setRequestError();
     getFreeId({ tableName })
       .then(newId => {
         setRecord({
@@ -111,7 +115,7 @@ export default function ({ tableName, scheme }: Props) {
 
   useEffect(() => {
     loadPage(1);
-  }, []);
+  }, [loadPage]);
 
   if (!pageData) {
     return <div>Loading...</div>;

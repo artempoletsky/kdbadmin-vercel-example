@@ -1,4 +1,4 @@
-import { ValidationErrorResponce } from "@artempoletsky/easyrpc/client";
+import { JSONErrorResponse } from "@artempoletsky/easyrpc/client";
 import { PlainObject } from "@artempoletsky/kurgandb/globals";
 import type { TableScheme } from "@artempoletsky/kurgandb/table";
 
@@ -42,13 +42,13 @@ export function formatCamelCase(str: string) {
 
 
 export type TableComponentProps = {
-  onRequestError: (e: ValidationErrorResponce) => void
+  onRequestError: (e: JSONErrorResponse) => void
   tableName: string
   scheme: TableScheme
 }
 
 export type DocumentComponentProps = {
-  onRequestError: (e: ValidationErrorResponce) => void
+  onRequestError: (e: JSONErrorResponse) => void
   // onUpdateRecord: (record: PlainObject) => void
   tableName: string
   record: PlainObject

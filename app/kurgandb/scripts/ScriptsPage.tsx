@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import FunctionComponent from "./FunctionComponent";
 import Log from "./Log";
-import type { ScriptsLogRecord } from "../api/route";
+import type { ScriptsLogRecord } from "../api/methods";
 import { formatCamelCase } from "../globals";
 
 
@@ -47,7 +47,7 @@ export default function ScriptsPage({ scripts }: Props) {
         if (item.fun) {
           items.push(<FunctionComponent onLog={onLog} className="mb-3" key={newPath} {...item.fun} path={newPath} name={formatCamelCase(key)} />);
         } else {
-          items.push(<div key={newPath} className="mb-3 text-red-600">Failed to parse function: '{newPath}'</div>);
+          items.push(<div key={newPath} className="mb-3 text-red-600">Failed to parse function: &#39;{newPath}&#39;</div>);
         }
       }
     }

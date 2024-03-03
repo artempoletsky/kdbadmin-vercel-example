@@ -2,7 +2,7 @@
 
 import { getAPIMethod } from "@artempoletsky/easyrpc/client"
 import { API_ENDPOINT } from "../generated";
-import { FLogout } from "../api/route";
+import { FLogout } from "../api/methods";
 import { Button } from "@mantine/core";
 
 const logout = getAPIMethod<FLogout>(API_ENDPOINT, "logout");

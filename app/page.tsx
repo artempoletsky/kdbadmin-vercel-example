@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Kurgan DB",
 }
 
-export async function getReadmeHTML(): Promise<string> {
+async function getReadmeHTML(): Promise<string> {
   const fullPath = process.cwd() + "/README.md";
   const fileContents = fs.readFileSync(fullPath, { encoding: "utf8" });
 
@@ -22,7 +22,7 @@ export async function getReadmeHTML(): Promise<string> {
   return html;
 }
 
-export default async function () {
+export default async function page() {
   const html = await getReadmeHTML();
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">

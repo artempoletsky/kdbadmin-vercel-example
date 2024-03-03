@@ -1,6 +1,6 @@
 
 
-import Layout, { BreadrumbsArray } from "../comp/layout";
+import Layout, { BreadrumbsArray } from "../comp/PageLayout";
 
 import * as scriptsRaw from "../../kurgandb_admin/scripts";
 
@@ -55,7 +55,7 @@ function createGroup(scripts: PlainObject): Group {
 
 const scripts: Group = createGroup(scriptsRaw);
 
-export default async function () {
+export default async function page() {
 
   const crumbs: BreadrumbsArray = [
     { href: "/", title: "Tables" },

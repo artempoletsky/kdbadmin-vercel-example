@@ -12,6 +12,3 @@ const exampleTable1: TableEventsDeclaration = {
   }
 }
 
-export default {
-  // exampleTable1
-}
