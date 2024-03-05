@@ -147,3 +147,10 @@ export type AExecuteScript = z.infer<typeof executeScript>;
 
 
 export const getAllTables = ZEmpty;
+
+export const getLogsList = ZEmpty;
+
+export const getLog = z.object({
+  fileName: ZStringNonEmpty,
+});
+export type AGetLog = z.infer<typeof getLog>;

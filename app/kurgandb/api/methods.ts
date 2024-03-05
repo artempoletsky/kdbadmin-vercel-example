@@ -1,4 +1,3 @@
-import { ResponseError } from "@artempoletsky/easyrpc";
 import { Predicate } from "@artempoletsky/kurgandb";
 import { Table, TableScheme } from "@artempoletsky/kurgandb/table";
 import { queryUniversal as query } from "@artempoletsky/kurgandb";
@@ -15,6 +14,7 @@ import type {
   AExecuteScript,
   AGetDraft,
   AGetFreeId,
+  AGetLog,
   AGetPage,
   AGetScheme,
   AReadDocument,
@@ -30,7 +30,13 @@ import type {
 type Tables = Record<string, Table<any, any, any>>;
 function methodFactory<PayloadType extends PlainObject, ReturnType>(predicate: Predicate<Tables, PayloadType, ReturnType>) {
   return async function (payload: PayloadType): Promise<ReturnType> {
-    return await query(predicate, payload);
+    let result: ReturnType;
+    try {
+      result = await query(predicate, payload);
+    } catch (err: any) {
+      throw new ResponseError(err);
+    }
+    return result;
   }
 }
 
@@ -104,14 +110,19 @@ export type RGetPage = {
 }
 
 
-export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, queryString, page }, { db, $ }) => {
+export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, queryString, page }, { db, $, ResponseError }) => {
   let t = db.getTable(tableName);
   let table = t;
   let tq: any;
   if (!queryString) {
     tq = t.all().limit(0);
   } else {
-    tq = eval(queryString).limit(0);
+    try {
+      tq = eval(queryString).limit(0);
+    } catch (err) {
+      throw new ResponseError(`Query string contains errors: {...}`, [err + ""]);
+    }
+
   }
 
   function paginage<Type>(array: Type[], page: number, pageSize: number) {
@@ -122,7 +133,7 @@ export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, quer
     }
   }
 
-  return paginage(<any[]>tq.select($.primary), page, 20);
+  return paginage(tq.select($.primary), page, 20);
 });
 
 export type FGetPage = typeof getPage;
@@ -286,6 +297,7 @@ export type ScriptsLogRecord = {
 };
 
 import * as scripts from "../../kurgandb_admin/scripts";
+import { ResponseError } from "@artempoletsky/easyrpc";
 export const executeScript = async ({ args, path }: AExecuteScript): Promise<ScriptsLogRecord> => {
   const steps = path.split(".");
   let current: PlainObject | Function = scripts as PlainObject;
@@ -324,3 +336,17 @@ export const getAllTables = methodFactory(({ }, { }, { db }) => {
 });
 
 export type FGetAllTables = () => Promise<ReturnType<typeof getAllTables>>;
+
+
+
+
+export const getLogsList = methodFactory(({ }, { }, { db }) => {
+  return db.getLogsList();
+});
+export type FGetLogsList = () => Promise<ReturnType<typeof getLogsList>>;
+
+
+export const getLog = methodFactory(({ }, { fileName }: AGetLog, { db }) => {
+  return db.getLog(fileName);
+});
+export type FGetLog = typeof getLog;

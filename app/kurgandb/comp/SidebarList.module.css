@@ -1,0 +1,8 @@
+
+.sidebar {
+  @apply mt-3 flex-shrink pr-3 border-r border-stone-600 border-solid min-w-[350px] min-h-[675px];
+}
+
+.item {
+  @apply cursor-pointer py-1 border-b border-gray-500;
+}

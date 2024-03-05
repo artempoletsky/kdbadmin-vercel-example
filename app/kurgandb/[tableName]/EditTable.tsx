@@ -2,14 +2,14 @@
 
 import Paginator from "../comp/paginator";
 import EditDocumentForm from "./EditDocumentForm";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FGetDraft, FGetFreeId, FGetPage, FReadDocument, RGetPage } from "../api/methods";
 import { getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
 import type { TableScheme } from "@artempoletsky/kurgandb/table";
 import { Button, Textarea } from "@mantine/core";
 import RequestError from "../comp/RequestError";
 import { API_ENDPOINT } from "../generated";
-
+import cssSide from "../comp/SidebarList.module.css";
 
 import { PlainObject } from "@artempoletsky/kurgandb/globals";
 
@@ -36,7 +36,10 @@ export default function EditTable({ tableName, scheme }: Props) {
   let [currentId, setCurrentId] = useState<string | number | undefined>(undefined);
   let [pageData, setPageData] = useState<RGetPage | undefined>(undefined);
   let [page, setPage] = useState<number>(1);
-  let [queryString, setQueryString] = useState<string>("table.all()");
+  const queryDefault = "table.all()";
+  // let [queryString, setQueryString] = useState<string>(queryDefault);
+
+  const queryInput = useRef<HTMLTextAreaElement>(null);
   let [insertMode, setInsertMode] = useState<boolean>(false);
 
   const [setRequestError, , requestError] = useErrorResponse();
@@ -65,13 +68,15 @@ export default function EditTable({ tableName, scheme }: Props) {
     setRequestError();
     setRecord(undefined);
     setPage(page);
+    
+    const queryString =  !queryInput.current ? queryDefault : queryInput.current.value;
     getPage({
       page,
       queryString,
       tableName
     }).then(setPageData)
       .catch(setRequestError);
-  }, [queryString, tableName, setRequestError])
+  }, [tableName, setRequestError])
   // function loadPage() {
 
   // }
@@ -128,14 +133,14 @@ export default function EditTable({ tableName, scheme }: Props) {
   return (
     <div>
       <div className="mt-3 mb-1 flex gap-1">
-        <Textarea className="min-w-[500px]" resize="vertical" value={queryString} onChange={e => setQueryString(e.target.value)} />
+        <Textarea defaultValue={queryDefault} className="min-w-[500px]" resize="vertical" ref={queryInput}/>
         <Button className="align-top" onClick={e => loadPage(1)}>Select</Button>
         <div className="border-l border-gray-500 mx-3 h-[34px]"></div>
         <Button className="align-top" onClick={insert}>New record</Button>
       </div>
       <div className="flex">
-        <ul className="mt-3 flex-shrink pr-3 border-r border-stone-600 border-solid min-w-[350px] min-h-[675px]">
-          {pageData.documents.map(id => <li className="cursor-pointer py-1 border-b border-gray-500" key={id} onClick={e => openRecord(id)}>{id}</li>)}
+        <ul className={cssSide.sidebar}>
+          {pageData.documents.map(id => <li className={cssSide.item} key={id} onClick={e => openRecord(id)}>{id}</li>)}
         </ul>
         {scheme && record && <EditDocumentForm
           onClose={onClose}
