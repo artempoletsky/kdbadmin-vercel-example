@@ -1,21 +1,21 @@
 "use client";
-import type { TableScheme } from "@artempoletsky/kurgandb/table";
+import type { TableScheme } from "@artempoletsky/kurgandb/globals";
 
 // import Button from "./Button";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FCreateDocument, FDeleteDocument, FUpdateDocument } from "../api/methods";
+import type { FCreateDocument, FDeleteDocument, FUpdateDocument } from "../../api/methods";
 
-import FieldLabel from "../comp/FieldLabel";
+import FieldLabel from "../../comp/FieldLabel";
 import { ActionIcon, Button, Checkbox, CloseButton, Menu, MenuTarget, Modal, TextInput, Textarea, Tooltip } from "@mantine/core";
-import { API_ENDPOINT } from "../generated";
-import { blinkBoolean } from "../utils_client";
-import { $, FieldTag, FieldType, PlainObject } from "@artempoletsky/kurgandb/globals";
+import { API_ENDPOINT } from "../../generated";
+import { blinkBoolean } from "../../utils_client";
+import { FieldTag, FieldType, PlainObject } from "@artempoletsky/kurgandb/globals";
 import { JSONErrorResponse } from "@artempoletsky/easyrpc/client";
 
-import { fieldScripts } from "../../kurgandb_admin/field_scripts";
-import { ScriptsRecord, formatCamelCase } from "../globals";
-import CustomComponentRecord from "../../kurgandb_admin/components/CustomComponentRecord";
+import { fieldScripts } from "../../../kurgandb_admin/field_scripts";
+import { ScriptsRecord } from "../../globals";
+import CustomComponentRecord from "../../../kurgandb_admin/components/CustomComponentRecord";
 import { Calendar, Dots, Edit } from "tabler-icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { DateInput, DatePicker, DateTimePicker, DateValue } from "@mantine/dates";
@@ -27,16 +27,18 @@ const deleteDocument = getAPIMethod<FDeleteDocument>(API_ENDPOINT, "deleteDocume
 
 
 type Props = {
-  record: PlainObject
-  scheme: TableScheme
-  insertMode?: boolean
-  tableName: string
-  recordId: string | number | undefined
-  onCreated: (id: string | number) => void
-  onDeleted: () => void
-  onDuplicate: () => void
-  onRequestError: (e: JSONErrorResponse) => void
-  onClose: () => void
+  record: PlainObject;
+  scheme: TableScheme;
+  insertMode?: boolean;
+  tableName: string;
+  recordId: string | number | undefined;
+  onCreated: (id: string | number) => void;
+  onDeleted: () => void;
+  onDuplicate: () => void;
+  onRequestError: (e: JSONErrorResponse) => void;
+  onClose: () => void;
+  onUpdateId: (oldId: string | number, newId: string | number) => void;
+  primaryKey: string;
 };
 
 function createProxy<T>(record: T, setRecord: (newRecord: T) => void): T {
@@ -66,7 +68,9 @@ export default function EditDocumentForm({
   onCreated,
   onDuplicate,
   onRequestError,
-  onClose
+  onClose,
+  onUpdateId,
+  primaryKey,
 }: Props) {
 
   const form = useRef<HTMLFormElement>(null);
@@ -85,12 +89,19 @@ export default function EditDocumentForm({
   function save() {
 
     if (recordId === undefined) throw new Error("id is undefined");
-
+    const oldRecordId = recordId;
     updateDocument({
-      id: recordId,
+      id: oldRecordId,
       tableName,
       document: record
-    }).then(() => blinkBoolean(setSavedTooltip))
+    }).then(() => {
+      blinkBoolean(setSavedTooltip);
+      if (recordId != record[primaryKey]) {
+        console.log(recordId, record[primaryKey]);
+
+        onUpdateId(recordId, record[primaryKey]);
+      }
+    })
       .catch(onRequestError);
   }
 
@@ -154,7 +165,7 @@ export default function EditDocumentForm({
 
     const scriptNames: Record<string, string> = {};
     for (const key in scripts) {
-      scriptNames[key] = formatCamelCase(key);
+      scriptNames[key] = key.replaceAll("_", " ");
     }
     const scriptKeys = Object.keys(scriptNames);
 
@@ -290,7 +301,6 @@ export default function EditDocumentForm({
     <div className="min-w-[500px] relative pt-5">
       <div className="absolute right-0 top-0">
         <CloseButton onClick={onClose} />
-        {/* <ActionIcon className="" size="md"></ActionIcon> */}
       </div>
       <form className="mb-5" ref={form}>{fields}</form>
       {insertMode

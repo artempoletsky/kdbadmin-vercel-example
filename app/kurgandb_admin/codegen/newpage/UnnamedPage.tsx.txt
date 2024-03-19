@@ -1,7 +1,7 @@
 "use client";
 
-import { ValidationErrorResponse, getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FSayHello } from "./api/route";
+import { fetchCatch, getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
+import type { FSayHello } from "./api/methods";
 import { useState } from "react";
 
 const sayHello = getAPIMethod<FSayHello>("/$$PATH$$/api", "sayHello");
@@ -11,16 +11,19 @@ type Props = {};
 export default function TestComponent(props: Props) {
   const [greeting, setGreeting] = useState("");
   const [name, setName] = useState("");
-  const [errorMessage, setErrorMessage] = useState<ValidationErrorResponse | null>();
+  const [setErrorResponse, mainErrorMessage, errorResponse] = useErrorResponse();
 
-  function onClick() {
-    setErrorMessage(null);
-    sayHello({
-      name
+
+  const onClick = fetchCatch(sayHello)
+    .before(() => {
+      return {
+        name,
+      }
     })
-      .then(setGreeting)
-      .catch(setErrorMessage);
-  }
+    .then(setGreeting)
+    .catch(setErrorResponse)
+    .action();
+
   return (
     <div className="">
       <div className="inline-flex gap-3">
@@ -34,9 +37,8 @@ export default function TestComponent(props: Props) {
         <button className="rounded bg-blue-500 px-3 py-1 text-white h-[36px]" onClick={onClick}>{greeting ? greeting : "Say hello!"}</button>
       </div>
 
-      {errorMessage &&
-        <div className="text-red-600">{errorMessage.message}</div>
-      }
+      <div className="text-red-600 min-h-[24px]">{mainErrorMessage}</div>
+
     </div>
   );
 }

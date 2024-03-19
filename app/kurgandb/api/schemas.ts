@@ -7,11 +7,13 @@ const ZTableOnly = z.object({
   tableName: ZStringNonEmpty,
 });
 
+export type ATableOnly = z.infer<typeof ZTableOnly>;
+
 const ZEmpty = z.object({});
 
 
 
-const ZKeyType = z.union([ZStringNonEmpty, z.number()]);
+const ZKeyType = z.union([z.string(), z.number()]);
 
 
 export const createDocument = z.object({
@@ -47,15 +49,16 @@ export type ADeleteDocument = z.infer<typeof deleteDocument>;
 
 
 export const getScheme = ZTableOnly;
+export const getSchemePage = ZTableOnly;
 export type AGetScheme = z.infer<typeof getScheme>;
 
 
-export const getPage = z.object({
+export const queryRecords = z.object({
   tableName: ZStringNonEmpty,
-  queryString: ZStringNonEmpty,
+  queryString: z.string(),
   page: z.number(),
 });
-export type AGetPage = z.infer<typeof getPage>;
+export type AQueryRecords = z.infer<typeof queryRecords>;
 
 
 export const toggleTag = z.object({
@@ -118,7 +121,7 @@ export type ARenameField = z.infer<typeof renameField>;
 
 
 export const createTable = z.object({
-  tableName: ZStringNonEmpty,
+  tableName: z.string().regex(/^[a-zA-Z]/, "Must start with a latin letter").trim().min(1, "Required"),
   keyType: z.union([z.literal("string"), z.literal("number")]),
   autoIncrement: z.boolean(),
 });
@@ -147,10 +150,38 @@ export type AExecuteScript = z.infer<typeof executeScript>;
 
 
 export const getAllTables = ZEmpty;
+export const getAllTablesPage = ZEmpty;
 
 export const getLogsList = ZEmpty;
+export const getLogsListPage = ZEmpty;
 
 export const getLog = z.object({
   fileName: ZStringNonEmpty,
 });
 export type AGetLog = z.infer<typeof getLog>;
+
+
+export const getTableEvents = ZTableOnly;
+
+
+export const toggleAdminEvent = z.object({
+  tableName: ZStringNonEmpty,
+  eventName: ZStringNonEmpty,
+});
+export type AToggleAdminEvent = z.infer<typeof toggleAdminEvent>;
+
+
+export const unregisterEvent = z.object({
+  tableName: ZStringNonEmpty,
+  eventName: ZStringNonEmpty,
+  namespaceId: ZStringNonEmpty,
+});
+export type AUnregisterEvent = z.infer<typeof unregisterEvent>;
+
+export const getTableCustomPageData = ZTableOnly;
+
+export const getTableValidation = ZTableOnly;
+
+export const setCurrentTableValidator = ZTableOnly;
+export const unsetCurrentTableValidator = ZTableOnly;
+export const getInvalidRecords = ZTableOnly;

@@ -1,8 +1,8 @@
 "use client";
-import type { TableScheme } from "@artempoletsky/kurgandb/table";
-import { ReactNode, useState } from "react";
-import { getAPIMethod, JSONErrorResponse } from "@artempoletsky/easyrpc/client";
-import type { FAddField, FChangeFieldIndex, FRemoveField, FRenameField, FToggleTag } from "../../api/methods";
+import type { TableScheme } from "@artempoletsky/kurgandb/globals";
+import { ReactNode, useEffect, useState } from "react";
+import { fetchCatch, getAPIMethod, JSONErrorResponse, useErrorResponse } from "@artempoletsky/easyrpc/client";
+import type { FAddField, FChangeFieldIndex, FGetScheme, FRemoveField, FRenameField, FToggleTag, RGetSchemePage } from "../../api/methods";
 import FieldLabel from "../../comp/FieldLabel";
 import { ActionIcon, Button, Select, Tooltip } from "@mantine/core";
 import { FieldTag } from "@artempoletsky/kurgandb/globals";
@@ -12,65 +12,69 @@ import { ChevronDown, ChevronUp, Trash } from 'tabler-icons-react';
 import RequestError from "../../comp/RequestError";
 import { API_ENDPOINT } from "../../generated";
 import { blinkBoolean } from "../../utils_client";
-import { AAddField } from "../../api/schemas";
+import { AAddField, ATableOnly } from "../../api/schemas";
 
 const toggleTag = getAPIMethod<FToggleTag>(API_ENDPOINT, "toggleTag");
 const removeField = getAPIMethod<FRemoveField>(API_ENDPOINT, "removeField");
 const addField = getAPIMethod<FAddField>(API_ENDPOINT, "addField");
 const changeFieldIndex = getAPIMethod<FChangeFieldIndex>(API_ENDPOINT, "changeFieldIndex");
 const renameField = getAPIMethod<FRenameField>(API_ENDPOINT, "renameField");
+const getScheme = getAPIMethod<FGetScheme>(API_ENDPOINT, "getScheme");
 
-type Props = {
-  tableName: string
-  scheme: TableScheme
-}
+
+type Props = ATableOnly & RGetSchemePage;
 
 const TAGS_AVAILABLE: FieldTag[] = ["index", "unique", "textarea", "heavy", "hidden"];
 
 
-export default function EditTableScheme({ tableName, scheme: schemeInitial }: Props) {
+export default function PageTableScheme({ tableName, scheme: schemeInitial }: Props) {
   const fields: ReactNode[] = [];
 
-  let [scheme, setScheme] = useState(schemeInitial);
+  let [scheme, setScheme] = useState<TableScheme>(schemeInitial);
 
-  let [requestError, setRequestError] = useState<JSONErrorResponse | undefined>(undefined);
+  const [setRequestError, , requestError] = useErrorResponse();
   const [typeCopiedTooltip, setTypeCopiedTooltip] = useState(false);
 
-  function toggleHandler(fieldName: string, tagName: FieldTag) {
-    setRequestError(undefined);
-    toggleTag({
+  const fc = fetchCatch({
+    errorCatcher: setRequestError,
+    before: () => ({ tableName }),
+    then: setScheme,
+  });
+
+  const fcToggle = fc.method(toggleTag)
+    .before((fieldName: string) => ({
       tableName,
       fieldName,
-      tagName,
-    }).then(setScheme)
-      .catch(setRequestError);
-  }
+      tagName: $select(fieldName),
+    }));
 
-  function confirmRemoveField(fieldName: string) {
-    const delStr = prompt(`Write '${fieldName}' to confirm removing this field`);
-    if (delStr != fieldName) return;
-    setRequestError(undefined);
-    removeField({
+
+  const fcRemoveField = fc.method(removeField)
+    .confirm(async (fieldName: string) => {
+      const delStr = prompt(`Write '${fieldName}' to confirm removing this field`);
+      return delStr == fieldName;
+    })
+    .before((fieldName: string) => ({
       tableName,
       fieldName,
-    }).then(setScheme)
-      .catch(setRequestError);
-  }
+    }));
 
-  function promptRenameField(fieldName: string) {
-    const newName = prompt(`Enter the new field name:`);
-    if (!newName) return;
 
-    setRequestError(undefined);
-    renameField({
-      tableName,
-      fieldName,
-      newName,
-    }).then(setScheme)
-      .catch(setRequestError);
-  }
+  const fcRenameField = fc.method(renameField)
+    .before((fieldName: string) => {
+      const newName = prompt(`Enter the new field name:`);
+      if (!newName) return;
+      return ({
+        tableName,
+        fieldName,
+        newName,
+      })
+    });
+
+
 
   function copyDocumentType() {
+    if (!scheme) return;
     let res = `type ${tableName} = {\n`;
     for (const field of scheme.fieldsOrderUser) {
       const type = scheme.fields[field];
@@ -93,31 +97,33 @@ export default function EditTableScheme({ tableName, scheme: schemeInitial }: Pr
     blinkBoolean(setTypeCopiedTooltip);
   }
 
+  const fcAddField = fc.method(addField)
+    .before((args: AAddField) => args);
+
 
   function onAddField(args: AAddField) {
-    setRequestError(undefined);
-
-    addField(args)
-      .then(setScheme)
-      .catch(setRequestError);
+    fcAddField.action(args)();
   }
 
-  function moveField(fieldName: string, direction: number) {
-    const newIndex = scheme.fieldsOrderUser.indexOf(fieldName) + direction;
-    changeFieldIndex({
-      fieldName,
-      tableName,
-      newIndex,
-    })
-      .then(setScheme)
-      .catch(setRequestError);
-  }
+  const fcMoveField = fc.method(changeFieldIndex)
+    .before((fieldName: string, direction: number) => {
+      if (!scheme) throw new Error("no scheme");
+
+      const newIndex = scheme.fieldsOrderUser.indexOf(fieldName) + direction;
+      return {
+        fieldName,
+        tableName,
+        newIndex,
+      };
+    });
+
 
   function $select(fieldName: string) {
     const sel = document.querySelector<HTMLInputElement>(`input[name=tag_select_${fieldName}]`);
     if (!sel) throw new Error(`select ${fieldName} not found`);
     return sel.value as FieldTag;
   }
+
 
   let i = 0;
   for (const fieldName of scheme.fieldsOrderUser) {
@@ -128,9 +134,9 @@ export default function EditTableScheme({ tableName, scheme: schemeInitial }: Pr
     tagsType.unshift(type);
 
     fields.push(<li className="mb-3" key={fieldName}>
-      <FieldLabel fieldName={fieldName} scheme={scheme} onRename={promptRenameField} />
+      <FieldLabel fieldName={fieldName} scheme={scheme} onRename={fcRenameField.action()} />
       <div className="flex gap-3">
-        <Button onClick={e => toggleHandler(fieldName, $select(fieldName))}>Toggle tag:</Button>
+        <Button onClick={fcToggle.action(fieldName)}>Toggle tag:</Button>
         <Select
           allowDeselect={false}
           name={`tag_select_${fieldName}`}
@@ -139,23 +145,23 @@ export default function EditTableScheme({ tableName, scheme: schemeInitial }: Pr
         <ActionIcon
           className="p-1.5"
           size={36}
-          onClick={e => confirmRemoveField(fieldName)}>
+          onClick={fcRemoveField.action(fieldName)}>
           <Trash />
         </ActionIcon>
-        
+
         <div className="border-l border-stone-800 w-[40px] flex flex-col pl-3">
           <ActionIcon
             disabled={i == 0}
             // className="absolute left-3 top-0"
             size={18}
-            onClick={e => moveField(fieldName, -1)}>
+            onClick={fcMoveField.action(fieldName, -1)}>
             <ChevronUp />
           </ActionIcon>
           <ActionIcon
             disabled={i == scheme.fieldsOrderUser.length - 1}
             // className="absolute left-3 bottom-0"
             size={18}
-            onClick={e => moveField(fieldName, 1)}>
+            onClick={fcMoveField.action(fieldName, 1)}>
             <ChevronDown />
           </ActionIcon>
         </div>
@@ -166,6 +172,7 @@ export default function EditTableScheme({ tableName, scheme: schemeInitial }: Pr
     </li>)
     i++;
   }
+
 
   return <div><ul>
     {fields}

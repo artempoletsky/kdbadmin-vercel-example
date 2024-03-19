@@ -1,0 +1,44 @@
+@layer admin {
+
+  .h2 {
+    @apply font-bold text-xl mb-5 mt-3;
+  }
+
+  .h3 {
+    @apply h2;
+    @apply text-lg mb-1;
+  }
+
+  .col_l {
+    @apply pr-3 border-r border-stone-500;
+    width: 550px;
+  }
+
+  .col_r {
+    @apply pl-3;
+    width: 550px;
+  }
+
+  .sidebar {
+    @apply mt-3 flex-shrink pr-3 border-r border-stone-600 border-solid min-w-[350px] min-h-[675px];
+  }
+
+  .sidebar_li {
+    @apply cursor-pointer py-1 border-b border-gray-500;
+    min-height: 34px;
+    white-space: pre;
+  }
+
+  .pseudo {
+    border-bottom: 1px dashed;
+    @apply text-blue-900 border-blue-900;
+    font-style: normal;
+    cursor: pointer;
+    line-height: 1.1em;
+  }
+
+  .link {
+    @apply underline text-blue-900;
+  }
+
+}

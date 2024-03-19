@@ -1,12 +1,10 @@
 
-import { getScheme } from "../../api/methods";
+import PageValidation from "./PageValidation";
+import { Metadata } from "next";
 import Layout, { BreadrumbsArray } from "../../comp/PageLayout";
-
-// import type { FGetScheme, FReadDocument } from "../api/route";
-
-import { TableScheme } from "@artempoletsky/kurgandb/table";
-
-
+import { FGetTableValidation, getTableValidation } from "../../api/methods";
+import ComponentLoader from "../../comp/ComponentLoader";
+import TableNotFound from "../TableNotFound";
 
 
 type Payload = {
@@ -16,20 +14,14 @@ type Props = {
   params: Payload
 }
 
+export const metadata: Metadata = {
+  title: "",
+};
 
-export const dynamic = "force-dynamic";
-
+export const dynamic = "force-static";
 
 export default async function page({ params }: Props) {
   const { tableName } = params;
-  let scheme: TableScheme | undefined;
-  try {
-    scheme = await getScheme({
-      tableName
-    });
-  } catch (error) {
-    console.log(error);
-  }
 
   const crumbs: BreadrumbsArray = [
     { href: "/", title: "Tables" },
@@ -37,9 +29,17 @@ export default async function page({ params }: Props) {
     { href: "", title: "Validation rules" },
   ];
 
+  metadata.title = `${tableName} events`;
+
+  const getTableValidation: FGetTableValidation = "getTableValidation" as any;
   return (
     <Layout breadcrumbs={crumbs} tableName={tableName}>
-      not implemented yet
+      <ComponentLoader
+        method={getTableValidation}
+        Component={PageValidation}
+        args={{ tableName }}
+        error={<TableNotFound tableName={tableName} />}
+      />
     </Layout>
   );
 }

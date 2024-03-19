@@ -1,6 +1,6 @@
 "use client";
 
-import { getAPIMethod } from "@artempoletsky/easyrpc/client";
+import { fetchCatch, getAPIMethod } from "@artempoletsky/easyrpc/client";
 import { ActionIcon, Button, Tooltip } from "@mantine/core";
 import Link from "next/link";
 import { API_ENDPOINT, ROOT_PATH } from "../generated";
@@ -8,6 +8,7 @@ import type { FRemoveTable } from "../api/methods";
 
 import { AirBalloon, Alarm, Asset, Edit, FileDatabase, Trash, ZoomExclamation } from 'tabler-icons-react';
 import { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
 const removeTable = getAPIMethod<FRemoveTable>(API_ENDPOINT, "removeTable");
 
@@ -22,18 +23,18 @@ type Item = {
 }
 
 
-export default function TableMenu({ tableName }: Props) {
+export default function TableHeader({ tableName }: Props) {
 
 
   const Items: Item[] = [
     {
-      label: "Edit documents",
-      icon: <Edit />,
+      label: "Edit records",
+      icon: <FileDatabase />,
       href: `/${ROOT_PATH}/${tableName}`,
     },
     {
       label: "Edit scheme",
-      icon: <FileDatabase />,
+      icon: <Edit />,
       href: `/${ROOT_PATH}/${tableName}/scheme`,
     },
     {
@@ -53,19 +54,15 @@ export default function TableMenu({ tableName }: Props) {
     },
   ];
 
-  function confirmRemoveTable() {
-    // setRequestError(undefined);
 
-    const delStr = prompt(`Type '${tableName}' to confirm removing this table`);
-    if (delStr != tableName) return;
-    removeTable({
-      tableName,
+  const router = useRouter();
+  const doConfirmRemoveTable = fetchCatch(removeTable)
+    .before(() => {
+      const delStr = prompt(`Type '${tableName}' to confirm removing this table`);
+      if (delStr != tableName) return;
+      return { tableName };
     })
-      .then(() => {
-        window.location.href = `/${ROOT_PATH}/`;
-      })
-    // .catch(setRequestError);
-  }
+    .then(() => { router.replace(`/${ROOT_PATH}/`); }).action();
 
   return <div className="flex gap-3">
     {Items.map(e => (
@@ -75,7 +72,7 @@ export default function TableMenu({ tableName }: Props) {
     ))}
     <div className="grow"></div>
     <Tooltip key="remove" label="Remove table">
-      <ActionIcon onClick={confirmRemoveTable} size={36}><Trash /></ActionIcon>
+      <ActionIcon onClick={doConfirmRemoveTable} size={36}><Trash /></ActionIcon>
     </Tooltip>
   </div>
 }

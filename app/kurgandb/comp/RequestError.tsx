@@ -7,7 +7,7 @@ type Props = {
 export default function RequestError({ requestError }: Props) {
 
   return <>
-    {requestError && requestError.preferredErrorDisplay != "field" && <div className="text-red-800">
+    {requestError && requestError.preferredErrorDisplay != "field" && <div className="text-red-600">
       <p className="">Request has failed:</p>
       <p className="">{mainErrorMessage(requestError)}</p>
     </div>}</>

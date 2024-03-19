@@ -27,6 +27,8 @@ export const POST = async function name(request: NextRequest) {
 
   let result, status;
 
+  // console.log(Object.keys(schemas).length, Object.keys(schemas));
+  
   [result, status] = await validate(req, {
     ...schemas,
     ...customRules,

@@ -1,4 +1,4 @@
-import { TableScheme } from "@artempoletsky/kurgandb/table"
+import { TableScheme } from "@artempoletsky/kurgandb/globals"
 import { ActionIcon } from "@mantine/core"
 import { Edit } from "tabler-icons-react"
 

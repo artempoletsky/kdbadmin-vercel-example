@@ -4,7 +4,6 @@ import { ReactNode, useState } from "react";
 import FunctionComponent from "./FunctionComponent";
 import Log from "./Log";
 import type { ScriptsLogRecord } from "../api/methods";
-import { formatCamelCase } from "../globals";
 
 
 
@@ -24,6 +23,9 @@ type Props = {
   scripts: Group
 }
 
+export function formatName(key: string) {
+  return key.replaceAll("_", " ");
+}
 
 export default function ScriptsPage({ scripts }: Props) {
 
@@ -45,14 +47,15 @@ export default function ScriptsPage({ scripts }: Props) {
         items.push(printGroup(item.children, newPath, key));
       } else {
         if (item.fun) {
-          items.push(<FunctionComponent onLog={onLog} className="mb-3" key={newPath} {...item.fun} path={newPath} name={formatCamelCase(key)} />);
+          items.push(<FunctionComponent onLog={onLog} className="mb-3" key={newPath} {...item.fun} path={newPath} name={formatName(key)} />);
         } else {
           items.push(<div key={newPath} className="mb-3 text-red-600">Failed to parse function: &#39;{newPath}&#39;</div>);
         }
       }
     }
-    return <div key={path} className="pl-4 pb-2 mb-2 border-l-2 border-gray-500">
-      {key && <label className="px-4 inline-block mb-3 border-b border-gray-500 relative left-[-16px]">{formatCamelCase(key)}</label>}
+    const className = path == "scripts" ? "" : "pl-4 pb-2 mb-2 border-l-2 border-gray-500";
+    return <div key={path} className={className}>
+      {key && <label className="px-4 inline-block mb-3 border-b border-gray-500 relative left-[-16px]">{formatName(key)}</label>}
       <div className="">{items}</div>
     </div>
   }

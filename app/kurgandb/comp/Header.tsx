@@ -1,6 +1,6 @@
 import { Button } from "@mantine/core";
 import LogoutButton from "./LogoutButton";
-import Link from "next/link";
+import Link from "./Link";
 import { ROOT_PATH } from "../generated";
 import { ReactNode } from "react";
 

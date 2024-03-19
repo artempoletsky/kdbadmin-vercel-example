@@ -1,5 +1,5 @@
 
-import { MouseEvent } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 import css from "./paginator.module.css";
 
 type Props = {
@@ -16,6 +16,8 @@ type PaginatorElement = {
   key: number
   page?: number
 }
+
+
 export default function Paginator({ page, pagesCount, span, onSetPage }: Props) {
   const elems: PaginatorElement[] = [];
   if (span === undefined) {

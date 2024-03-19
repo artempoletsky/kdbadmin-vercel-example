@@ -3,37 +3,36 @@ import Layout from "./comp/PageLayout";
 import CreateNewTable from "./comp/CreateNewTable";
 import { API_ENDPOINT, ROOT_PATH } from "./generated";
 import Link from "./comp/Link";
-import { getAllTables, type FGetAllTables } from "./api/methods";
-import { getAPIMethod } from "@artempoletsky/easyrpc/client";
+import { getDBVersion, type FGetAllTablesPage } from "./api/methods";
+import { Metadata } from "next";
+import AllTables from "./comp/AllTables";
+import ComponentLoader from "./comp/ComponentLoader";
 
-import { headers, cookies } from 'next/headers'
 
+export const metadata: Metadata = {
+  title: "",
+}
 
-// const hrs = headers();
-
-// console.log(hrs.get("host"));
-// console.log(hrs.get("protocol"));
-// console.log(cookies());
-
-// const getAllTables = getAPIMethod<FGetAllTables>("http://" + hrs.get("host") + API_ENDPOINT, "getAllTables", {
-//   cache: "no-cache"
-// });
-
-// export const dynamic = "force-dynamic";
-
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
 export default async function page() {
 
-  const tableNames: string[] = await getAllTables({});
+  const { adminVersion, dbVersion } = await getDBVersion({});
+
+  metadata.title = adminVersion;
+  const getAllTablesPage = "getAllTablesPage" as unknown as FGetAllTablesPage;
 
   return (
     <Layout>
-      <div>KurganDB</div>
+      <div>{adminVersion} / {dbVersion}</div>
       <div className="flex">
-        <ul className="mt-3 w-[350px]">
-          {tableNames.map(id => <li className="mb-1" key={id}><Link href={`/${ROOT_PATH}/${id}/`}>{id}</Link></li>)}
-        </ul>
+        <div className="mt-3 w-[350px]">
+          <ComponentLoader
+            Component={AllTables}
+            method={getAllTablesPage}
+            args={{}}
+          />
+        </div>
         <CreateNewTable />
       </div>
     </Layout>

@@ -1,5 +1,5 @@
 import { Predicate } from "@artempoletsky/kurgandb";
-import { Table, TableScheme } from "@artempoletsky/kurgandb/table";
+import { Table, TableScheme } from "@artempoletsky/kurgandb/globals";
 import { queryUniversal as query } from "@artempoletsky/kurgandb";
 
 import { FieldTag, PlainObject } from "@artempoletsky/kurgandb/globals";
@@ -15,31 +15,32 @@ import type {
   AGetDraft,
   AGetFreeId,
   AGetLog,
-  AGetPage,
+  AQueryRecords as AQueryRecords,
   AGetScheme,
   AReadDocument,
   ARemoveField,
   ARemoveTable,
   ARenameField,
+  ATableOnly,
+  AToggleAdminEvent,
   AToggleTag,
+  AUnregisterEvent,
   AUpdateDocument
 } from "./schemas";
 
 
+export type CompType<Type extends (arg: any) => Promise<any>> = Awaited<ReturnType<Type>> & Parameters<Type>[0];
 
 type Tables = Record<string, Table<any, any, any>>;
-function methodFactory<PayloadType extends PlainObject, ReturnType>(predicate: Predicate<Tables, PayloadType, ReturnType>) {
-  return async function (payload: PayloadType): Promise<ReturnType> {
-    let result: ReturnType;
-    try {
-      result = await query(predicate, payload);
-    } catch (err: any) {
-      throw new ResponseError(err);
-    }
-    return result;
+
+function methodFactory<Payload extends PlainObject, PredicateReturnType, ReturnType = PredicateReturnType>(predicate: Predicate<Tables, Payload, PredicateReturnType>, then?: (dbResult: PredicateReturnType, payload: Payload) => ReturnType) {
+  return async function (payload: Payload) {
+    let dbResult: PredicateReturnType;
+    dbResult = await query(predicate, payload);
+    if (!then) return dbResult as unknown as ReturnType;
+    return then(dbResult, payload);
   }
 }
-
 
 export const createDocument = methodFactory<ACreateDocument, string | number>((T, { tableName, document }, { db }) => {
   let t = db.getTable(tableName);
@@ -67,7 +68,10 @@ export const updateDocument = methodFactory(({ }, { tableName, document, id }: A
 
   t.where(<any>t.primaryKey, id).update(doc => {
     for (const key in document) {
-      doc.set(key, document[key]);
+      const newValue = document[key];
+      if (doc.$get(key) != newValue) {
+        doc.$set(key as any, newValue);
+      }
     }
   });
 });
@@ -100,17 +104,28 @@ export const getScheme = methodFactory(({ }, { tableName }: AGetScheme, { db }) 
 
 export type FGetScheme = typeof getScheme;
 
+export async function getSchemePage(args: AGetScheme) {
+  const scheme = await getScheme(args);
+  return {
+    scheme,
+  }
+}
+
+export type FGetSchemePage = typeof getSchemePage;
+export type RGetSchemePage = Awaited<ReturnType<FGetSchemePage>>;
+
+
 /////////////////////////////////////////////////////
 
 
 
-export type RGetPage = {
-  documents: any[]
-  pagesCount: number
+export type RQueryRecords = {
+  documents: any[];
+  pagesCount: number;
 }
 
 
-export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, queryString, page }, { db, $, ResponseError }) => {
+export const queryRecords = methodFactory<AQueryRecords, RQueryRecords>(({ }, { tableName, queryString, page }, { db, $ }) => {
   let t = db.getTable(tableName);
   let table = t;
   let tq: any;
@@ -120,9 +135,14 @@ export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, quer
     try {
       tq = eval(queryString).limit(0);
     } catch (err) {
-      throw new ResponseError(`Query string contains errors: {...}`, [err + ""]);
+      throw new $.ResponseError(`Query string contains errors: {...}`, [err + ""]);
     }
-
+  }
+  let ids: any[];
+  try {
+    ids = tq.select($.primary);
+  } catch (err) {
+    throw new $.ResponseError("Query has failed with error {...}", [err + ""]);
   }
 
   function paginage<Type>(array: Type[], page: number, pageSize: number) {
@@ -133,10 +153,10 @@ export const getPage = methodFactory<AGetPage, RGetPage>(({ }, { tableName, quer
     }
   }
 
-  return paginage(tq.select($.primary), page, 20);
+  return paginage(ids, page, 20);
 });
 
-export type FGetPage = typeof getPage;
+export type FQueryRecords = typeof queryRecords;
 
 /////////////////////////////////////////////////////
 
@@ -169,7 +189,7 @@ export type FGetFreeId = typeof getFreeId;
 
 export const getDraft = methodFactory<AGetDraft, any>(({ }, { tableName }, { db }) => {
   let t = db.getTable(tableName);
-  return t.getDocumentDraft();
+  return t.getRecordDraft();
 });
 
 export type FGetDraft = typeof getDraft;
@@ -179,14 +199,14 @@ export type FGetDraft = typeof getDraft;
 ///////////////////////////////////////////
 
 
-export const addField = methodFactory<AAddField, TableScheme>(({ }, { tableName, fieldName, type, isHeavy }, { db, ResponseError }) => {
+export const addField = methodFactory<AAddField, TableScheme>(({ }, { tableName, fieldName, type, isHeavy }, { db, $ }) => {
   let t = db.getTable(tableName);
   try {
     t.addField(fieldName, type, isHeavy);
   } catch (err) {
     // throw err;
 
-    throw new ResponseError({
+    throw new $.ResponseError({
       invalidFields: {
         fieldName: {
           message: "Already taken {...} ({...})",
@@ -330,14 +350,30 @@ export const executeScript = async ({ args, path }: AExecuteScript): Promise<Scr
 export type FExecuteScript = typeof executeScript;
 
 
-export const getAllTables = methodFactory(({ }, { }, { db }) => {
-  const tables = db.getTables();
-  return Object.keys(tables);
+export const getDBVersion = methodFactory(({ }, { }: {}, { db }) => {
+  return db.versionString;
+}, dbVersion => {
+  return {
+    adminVersion: `KurganDB admin v${ADMIN_VERSION}`,
+    dbVersion,
+  };
 });
 
-export type FGetAllTables = () => Promise<ReturnType<typeof getAllTables>>;
+export type FGetDBVersion = typeof getDBVersion;
 
+export const getAllTables = methodFactory(({ }, { }: {}, { db }) => {
+  const tables = db.getTables();
+  return Object.keys(tables)
+});
 
+export type FGetAllTables = typeof getAllTables;
+
+export async function getAllTablesPage() {
+  return {
+    tables: await getAllTables({}),
+  }
+}
+export type FGetAllTablesPage = typeof getAllTablesPage;
 
 
 export const getLogsList = methodFactory(({ }, { }, { db }) => {
@@ -345,8 +381,163 @@ export const getLogsList = methodFactory(({ }, { }, { db }) => {
 });
 export type FGetLogsList = () => Promise<ReturnType<typeof getLogsList>>;
 
+export async function getLogsListPage() {
+  return {
+    logsList: await getLogsList({}),
+  }
+}
+export type FGetLogsListPage = typeof getLogsListPage;
+
 
 export const getLog = methodFactory(({ }, { fileName }: AGetLog, { db }) => {
   return db.getLog(fileName);
 });
 export type FGetLog = typeof getLog;
+
+import * as AdminEvents from "../../kurgandb_admin/events";
+import { ParsedFunction, parseFunction } from "@artempoletsky/kurgandb/function";
+
+
+export const getTableEvents = methodFactory(({ }, { tableName }: ATableOnly, { db }) => {
+  const t = db.getTable(tableName);
+  return t.getRegisteredEventListeners();
+}, (registeredEvents, { tableName }) => {
+  const evs = (AdminEvents as any)[tableName] || {};
+  return {
+    adminEvents: Object.keys(evs),
+    registeredEvents,
+  }
+});
+
+export type FGetTableEvents = typeof getTableEvents;
+
+export async function toggleAdminEvent({ eventName, tableName }: AToggleAdminEvent) {
+
+  type Payload = AToggleAdminEvent & {
+    fun: ParsedFunction
+  }
+  const evs = (AdminEvents as any)[tableName];
+  if (!evs) throw new ResponseError("Can't find events for table {...}", [tableName]);
+  const funRaw: Function = evs[eventName];
+  if (!funRaw) throw new ResponseError("Can't find event {...} for table {...}", [eventName, tableName]);
+
+  const fun = parseFunction(funRaw);
+  return await query(({ }, { tableName, eventName, fun }: Payload, { db }) => {
+    const t = db.getTable(tableName);
+    const result = !t.hasEventListener(eventName, "admin");
+    if (result) {
+      t.registerEventListenerParsed("admin", eventName, fun);
+    } else {
+      t.unregisterEventListener("admin", eventName);
+    }
+
+    return t.getRegisteredEventListeners();
+  }, {
+    eventName,
+    tableName,
+    fun,
+  });
+}
+export type FToggleAdminEvent = typeof toggleAdminEvent;
+
+export const unregisterEvent = methodFactory(({ }, { tableName, namespaceId, eventName }: AUnregisterEvent, { db }) => {
+  const t = db.getTable(tableName);
+  t.unregisterEventListener(namespaceId, eventName);
+  return t.getRegisteredEventListeners();
+});
+
+export type FUnregisterEvent = typeof unregisterEvent;
+
+
+export const getTableCustomPageData = methodFactory(({ }, { tableName }: ATableOnly, { db }) => {
+  const t = db.getTable(tableName);
+  return {
+    scheme: t.scheme,
+    meta: t.meta as any,
+  }
+});
+export type FGetTableCustomPageData = typeof getTableCustomPageData;
+export type RGetTableCustomPageData = Awaited<ReturnType<FGetTableCustomPageData>>;
+
+
+import * as AdminValidators from "../../kurgandb_admin/validation";
+import { ADMIN_VERSION } from "../generated";
+
+export type RUpdateValidationPage = {
+  invalidRecords: PlainObject[];
+  currentValidator: ParsedFunction;
+}
+
+export type RGetTableValidation = RUpdateValidationPage & {
+  adminValidator?: ParsedFunction;
+  primaryKey: string;
+}
+
+export const getTableValidation = methodFactory(({ }, { tableName }: ATableOnly, { db, $ }) => {
+  const t = db.getTable(tableName);
+  return {
+    currentValidator: t.getSavedValidator(),
+    primaryKey: t.primaryKey,
+    invalidRecords: t.filter($.invalid).limit(20).select($.light) as PlainObject[],
+  }
+}, ({ currentValidator, primaryKey, invalidRecords }, { tableName }) => {
+  // const evs = (AdminEvents as any)[tableName] || {};
+  let adminValidator: undefined | ParsedFunction;
+  const fn = (AdminValidators as any)[tableName];
+  if (fn) {
+    adminValidator = parseFunction(fn);
+  }
+
+  const result: RGetTableValidation = {
+    invalidRecords,
+    adminValidator,
+    currentValidator,
+    primaryKey,
+  }
+  return result;
+});
+
+export type FGetTableValidation = typeof getTableValidation;
+
+
+export const setCurrentTableValidator = async ({ tableName }: ATableOnly): Promise<RUpdateValidationPage> => {
+  const fn = (AdminValidators as any)[tableName];
+  if (!fn) {
+    throw new ResponseError("Validator for table {...} doesn't exist", [tableName]);
+  }
+
+  return await query(({ }, { tableName, fun }, { db, $ }) => {
+    const t = db.getTable(tableName);
+    t.setValidator(fun);
+    // return t.getSavedValidator();
+    return {
+      currentValidator: t.getSavedValidator(),
+      invalidRecords: t.filter($.invalid).limit(20).select($.light) as PlainObject[],
+    }
+  }, {
+    tableName,
+    fun: parseFunction(fn),
+  });
+}
+
+export type FSetCurrentTableValidator = typeof setCurrentTableValidator;
+
+
+export const unsetCurrentTableValidator = methodFactory(({ }, { tableName }: ATableOnly, { db, $ }): RUpdateValidationPage => {
+  const t = db.getTable(tableName);
+  t.setValidator();
+  return {
+    currentValidator: t.getSavedValidator(),
+    invalidRecords: t.filter($.invalid).limit(20).select($.light) as PlainObject[],
+  }
+});
+
+export type FUnsetCurrentTableValidator = typeof unsetCurrentTableValidator;
+
+
+export const getInvalidRecords = methodFactory(({ }, { tableName }: ATableOnly, { db, $ }) => {
+  const t = db.getTable(tableName);
+  return t.filter($.invalid).limit(20).select($.light) as PlainObject[]
+});
+
+export type FGetInvalidRecords = typeof getInvalidRecords;
