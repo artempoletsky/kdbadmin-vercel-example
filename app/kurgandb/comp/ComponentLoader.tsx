@@ -1,11 +1,13 @@
 "use client";
 
-import { getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
+import { getAPIMethod } from "@artempoletsky/easyrpc/client";
+import { useErrorResponse } from "@artempoletsky/easyrpc/react";
 import { ComponentType, ElementType, ReactElement, ReactNode, useEffect, useState } from "react";
 import { FGetTableEvents } from "../api/methods";
 import { API_ENDPOINT } from "../generated";
 import RequestError from "./RequestError";
 import { Loader } from "@mantine/core";
+import { adminRPC } from "../globals";
 
 
 export class Mutator<RT>  {
@@ -20,7 +22,7 @@ export class Mutator<RT>  {
 type Props<AT, RT, PT> = {
   method: (arg: AT) => Promise<RT>;
   Component: ComponentType<RT & AT & PT>;
-  args: AT;
+  args: AT | null;
   props?: PT;
   children?: ReactNode;
   onData?: (res: RT) => void;
@@ -37,10 +39,12 @@ export default function ComponentLoader
   const [setErrorResponse, mainErrorMessage, errorResponse] = useErrorResponse();
   const method = getAPIMethod<(arg: AT) => Promise<RT>>(API_ENDPOINT, methodName);
 
+  
   const [data, setData] = useState<RT>();
   useEffect(() => {
     setData(undefined);
     setErrorResponse();
+    if (!args) return;
     method(args).then(res => {
       setData(res);
       if (onData) onData(res);
@@ -51,9 +55,9 @@ export default function ComponentLoader
     if (mutator) {
       mutator.setter = setData;
     }
-  }, [args]);
+  }, [args]); // eslint-disable-line
 
-
+  if (!args) return "";
   if (!data && !errorResponse) {
     if (children) return children;
     return <Loader type="dots" />

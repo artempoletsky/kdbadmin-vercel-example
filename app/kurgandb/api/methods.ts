@@ -1,5 +1,5 @@
 import { Predicate } from "@artempoletsky/kurgandb";
-import { Table, TableScheme } from "@artempoletsky/kurgandb/globals";
+import { PluginFactory, Table, TableScheme } from "@artempoletsky/kurgandb/globals";
 import { queryUniversal as query } from "@artempoletsky/kurgandb";
 
 import { FieldTag, PlainObject } from "@artempoletsky/kurgandb/globals";
@@ -25,7 +25,8 @@ import type {
   AToggleAdminEvent,
   AToggleTag,
   AUnregisterEvent,
-  AUpdateDocument
+  AUpdateDocument,
+  ATogglePlugin
 } from "./schemas";
 
 
@@ -33,7 +34,7 @@ export type CompType<Type extends (arg: any) => Promise<any>> = Awaited<ReturnTy
 
 type Tables = Record<string, Table<any, any, any>>;
 
-function methodFactory<Payload extends PlainObject, PredicateReturnType, ReturnType = PredicateReturnType>(predicate: Predicate<Tables, Payload, PredicateReturnType>, then?: (dbResult: PredicateReturnType, payload: Payload) => ReturnType) {
+function methodFactory<Payload extends PlainObject, PredicateReturnType, ReturnType = PredicateReturnType>(predicate: Predicate<Tables, Payload, PredicateReturnType, {}>, then?: (dbResult: PredicateReturnType, payload: Payload) => ReturnType) {
   return async function (payload: Payload) {
     let dbResult: PredicateReturnType;
     dbResult = await query(predicate, payload);
@@ -54,7 +55,7 @@ export type FCreateDocument = typeof createDocument;
 
 export const readDocument = methodFactory(({ }, { tableName, id }: AReadDocument, { db, $ }) => {
   let t = db.getTable<any, any, any>(tableName);
-  return t.at(id, $.full);
+  return t.at<any>(id, $.full);
 });
 
 
@@ -66,7 +67,7 @@ export const updateDocument = methodFactory(({ }, { tableName, document, id }: A
 
   let t = db.getTable<string, any>(tableName);
 
-  t.where(<any>t.primaryKey, id).update(doc => {
+  t.where(<any>t.primaryKey, <any>id).update(doc => {
     for (const key in document) {
       const newValue = document[key];
       if (doc.$get(key) != newValue) {
@@ -84,7 +85,7 @@ export type FUpdateDocument = typeof updateDocument;
 export const deleteDocument = methodFactory(({ }, { tableName, id }: ADeleteDocument, { db }) => {
   let t = db.getTable<string, any>(tableName);
 
-  t.where(<any>t.primaryKey, id).delete();
+  t.where(<any>t.primaryKey, <any>id).delete();
 });
 
 export type FDeleteDocument = typeof deleteDocument;
@@ -125,7 +126,9 @@ export type RQueryRecords = {
 }
 
 
-export const queryRecords = methodFactory<AQueryRecords, RQueryRecords>(({ }, { tableName, queryString, page }, { db, $ }) => {
+export const queryRecords = methodFactory<AQueryRecords, RQueryRecords>(({ }, { tableName, queryString, page }, scope) => {
+  const { db, $, _, z } = scope;
+
   let t = db.getTable(tableName);
   let table = t;
   let tq: any;
@@ -201,22 +204,7 @@ export type FGetDraft = typeof getDraft;
 
 export const addField = methodFactory<AAddField, TableScheme>(({ }, { tableName, fieldName, type, isHeavy }, { db, $ }) => {
   let t = db.getTable(tableName);
-  try {
-    t.addField(fieldName, type, isHeavy);
-  } catch (err) {
-    // throw err;
-
-    throw new $.ResponseError({
-      invalidFields: {
-        fieldName: {
-          message: "Already taken {...} ({...})",
-          args: [t.scheme.fields[fieldName], t.scheme.tags[fieldName].join(", ")],
-        }
-      }
-    });
-
-  }
-
+  t.addField(fieldName, type, isHeavy);
   return t.scheme;
 });
 
@@ -336,7 +324,16 @@ export const executeScript = async ({ args, path }: AExecuteScript): Promise<Scr
 
 
   const t1 = performance.now();
-  let result = await current.apply(self, args);
+  let result;
+  try {
+    result = await current.apply(self, args);
+  } catch (err) {
+    return {
+      time: Math.floor(performance.now() - t1),
+      result: err + "",
+    }
+  }
+
   if (result === undefined) {
     result = "Success!";
   }
@@ -541,3 +538,51 @@ export const getInvalidRecords = methodFactory(({ }, { tableName }: ATableOnly, 
 });
 
 export type FGetInvalidRecords = typeof getInvalidRecords;
+
+
+export type RGetPlugins = {
+  registeredPlugins: Record<string, ParsedFunction>;
+  adminPlugins: string[];
+}
+import * as Plugins from "../../kurgandb_admin/plugins";
+export const getPlugins = methodFactory<{}, Record<string, ParsedFunction>, RGetPlugins>(({ }, { }, { db }) => {
+  return db.getPlugins();
+}, (registeredPlugins) => {
+  return {
+    registeredPlugins,
+    adminPlugins: Object.keys(Plugins),
+  }
+});
+export type FGetPlugins = () => Promise<RGetPlugins>
+
+export type PluginDef = {
+  npm: string[],
+  install: PluginFactory;
+};
+
+export async function togglePlugin({ pluginName }: ATogglePlugin) {
+  let pluginFactory: undefined | ParsedFunction;
+  let pluginDef: PluginDef | undefined = (Plugins as any)[pluginName];
+  let dependencies: string[] = [];
+  if (pluginDef) {
+    dependencies = pluginDef.npm;
+    pluginFactory = parseFunction(pluginDef.install);
+  }
+  return await query(async ({ }, { pluginName, pluginFactory, dependencies }, { db }) => {
+    const registered = db.getPlugins()[pluginName];
+    if (registered) {
+      db.unregisterPlugin(pluginName);
+      if (dependencies.length) {
+        await db.npmUninstall(dependencies.join(" "));
+      }
+    } else if (pluginFactory) {
+      if (dependencies.length) {
+        await db.npmInstall(dependencies.join(" "));
+      }
+      await db.registerPlugin(pluginName, pluginFactory);
+    }
+    return db.getPlugins();
+  }, { pluginName, pluginFactory, dependencies });
+}
+
+export type FTogglePlugin = typeof togglePlugin;

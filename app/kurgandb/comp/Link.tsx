@@ -2,7 +2,6 @@
 
 import NextLink, { LinkProps } from "next/link";
 import { MouseEvent, MouseEventHandler, ReactNode } from "react";
-import css from "../admin.module.css";
 import { ROOT_PATH } from "../generated";
 import { useRouter } from "next/navigation";
 
@@ -32,5 +31,5 @@ export default function Link(props: LinkProps & { className?: string, children: 
       window.location.href = href;
     }
   }
-  return <NextLink onClick={onClick} href={href} className={className + " " + css.link}>{props.children}</NextLink>
+  return <NextLink onClick={onClick} href={href} className={className + " link"}>{props.children}</NextLink>
 }

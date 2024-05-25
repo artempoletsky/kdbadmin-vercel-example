@@ -1,8 +1,8 @@
 "use client";
 import type { TableScheme } from "@artempoletsky/kurgandb/globals";
-import { ReactNode, useEffect, useState } from "react";
-import { fetchCatch, getAPIMethod, JSONErrorResponse, useErrorResponse } from "@artempoletsky/easyrpc/client";
-import type { FAddField, FChangeFieldIndex, FGetScheme, FRemoveField, FRenameField, FToggleTag, RGetSchemePage } from "../../api/methods";
+import { ReactNode, useState } from "react";
+import { useErrorResponse, fetchCatch } from "@artempoletsky/easyrpc/react";
+import type { RGetSchemePage } from "../../api/methods";
 import FieldLabel from "../../comp/FieldLabel";
 import { ActionIcon, Button, Select, Tooltip } from "@mantine/core";
 import { FieldTag } from "@artempoletsky/kurgandb/globals";
@@ -10,16 +10,19 @@ import { FieldTag } from "@artempoletsky/kurgandb/globals";
 import CreateNewField from "./CreateNewField";
 import { ChevronDown, ChevronUp, Trash } from 'tabler-icons-react';
 import RequestError from "../../comp/RequestError";
-import { API_ENDPOINT } from "../../generated";
-import { blinkBoolean } from "../../utils_client";
 import { AAddField, ATableOnly } from "../../api/schemas";
+import { generateCreateTable, generateRecordTypesFromScheme } from "./generateType";
+import Code from "../../comp/Code";
+import { adminRPC } from "../../globals";
 
-const toggleTag = getAPIMethod<FToggleTag>(API_ENDPOINT, "toggleTag");
-const removeField = getAPIMethod<FRemoveField>(API_ENDPOINT, "removeField");
-const addField = getAPIMethod<FAddField>(API_ENDPOINT, "addField");
-const changeFieldIndex = getAPIMethod<FChangeFieldIndex>(API_ENDPOINT, "changeFieldIndex");
-const renameField = getAPIMethod<FRenameField>(API_ENDPOINT, "renameField");
-const getScheme = getAPIMethod<FGetScheme>(API_ENDPOINT, "getScheme");
+const {
+  toggleTag,
+  removeField,
+  addField,
+  changeFieldIndex,
+  renameField,
+  getScheme,
+} = adminRPC().methods("toggleTag", "removeField", "addField", "changeFieldIndex", "renameField", "getScheme");
 
 
 type Props = ATableOnly & RGetSchemePage;
@@ -31,6 +34,7 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
   const fields: ReactNode[] = [];
 
   let [scheme, setScheme] = useState<TableScheme>(schemeInitial);
+
 
   const [setRequestError, , requestError] = useErrorResponse();
   const [typeCopiedTooltip, setTypeCopiedTooltip] = useState(false);
@@ -50,14 +54,14 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
 
 
   const fcRemoveField = fc.method(removeField)
+    .before((fieldName: string) => ({
+      tableName,
+      fieldName,
+    }))
     .confirm(async (fieldName: string) => {
       const delStr = prompt(`Write '${fieldName}' to confirm removing this field`);
       return delStr == fieldName;
     })
-    .before((fieldName: string) => ({
-      tableName,
-      fieldName,
-    }));
 
 
   const fcRenameField = fc.method(renameField)
@@ -71,31 +75,8 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
       })
     });
 
-
-
-  function copyDocumentType() {
-    if (!scheme) return;
-    let res = `type ${tableName} = {\n`;
-    for (const field of scheme.fieldsOrderUser) {
-      const type = scheme.fields[field];
-      let tsType: string = type;
-      switch (type) {
-        case "date":
-          tsType = "Date";
-          break;
-
-        case "json":
-          tsType = "null | {}";
-          break;
-      }
-
-      res += `  ${field}: ${tsType}\n`;
-    }
-    res += `}`;
-
-    navigator.clipboard.writeText(res);
-    blinkBoolean(setTypeCopiedTooltip);
-  }
+  const declarationCode = generateRecordTypesFromScheme(scheme, tableName);
+  const createTableCode = generateCreateTable(scheme, tableName);
 
   const fcAddField = fc.method(addField)
     .before((args: AAddField) => args);
@@ -106,7 +87,7 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
   }
 
   const fcMoveField = fc.method(changeFieldIndex)
-    .before((fieldName: string, direction: number) => {
+    .before<{ fieldName: string, direction: number }>(({ fieldName, direction }) => {
       if (!scheme) throw new Error("no scheme");
 
       const newIndex = scheme.fieldsOrderUser.indexOf(fieldName) + direction;
@@ -134,7 +115,7 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
     tagsType.unshift(type);
 
     fields.push(<li className="mb-3" key={fieldName}>
-      <FieldLabel fieldName={fieldName} scheme={scheme} onRename={fcRenameField.action()} />
+      <FieldLabel fieldName={fieldName} scheme={scheme} onRename={fcRenameField.action(fieldName)} />
       <div className="flex gap-3">
         <Button onClick={fcToggle.action(fieldName)}>Toggle tag:</Button>
         <Select
@@ -154,14 +135,14 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
             disabled={i == 0}
             // className="absolute left-3 top-0"
             size={18}
-            onClick={fcMoveField.action(fieldName, -1)}>
+            onClick={fcMoveField.action({ fieldName, direction: -1 })}>
             <ChevronUp />
           </ActionIcon>
           <ActionIcon
             disabled={i == scheme.fieldsOrderUser.length - 1}
             // className="absolute left-3 bottom-0"
             size={18}
-            onClick={fcMoveField.action(fieldName, 1)}>
+            onClick={fcMoveField.action({ fieldName, direction: 1 })}>
             <ChevronDown />
           </ActionIcon>
         </div>
@@ -174,14 +155,22 @@ export default function PageTableScheme({ tableName, scheme: schemeInitial }: Pr
   }
 
 
-  return <div><ul>
-    {fields}
-  </ul>
-    <CreateNewField requestError={requestError} onAddField={onAddField} tableName={tableName} />
+  return <div>
+    <div className="flex">
+      <ul>
+        {fields}
+      </ul>
+      <div className="">
+        <CreateNewField requestError={requestError} onAddField={onAddField} tableName={tableName} />
+        <RequestError requestError={requestError} />
+      </div>
+      <div className="">
+        <p className="mb-1">Record types declaration:</p>
+        <Code size="sm" code={declarationCode} />
+        <p className="mb-1">Create table:</p>
+        <Code size="sm" code={createTableCode} />
+      </div>
+    </div>
 
-    <RequestError requestError={requestError} />
-    <Tooltip opened={typeCopiedTooltip} label="Copied!">
-      <Button onClick={copyDocumentType}>Copy document type</Button>
-    </Tooltip>
   </div>
 }

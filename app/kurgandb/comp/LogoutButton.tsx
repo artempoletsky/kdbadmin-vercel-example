@@ -1,12 +1,9 @@
 "use client";
 
-import { getAPIMethod } from "@artempoletsky/easyrpc/client"
-import { API_ENDPOINT } from "../generated";
-import { FLogout } from "../api/methods";
 import { Button } from "@mantine/core";
+import { adminRPC } from "../globals";
 
-const logout = getAPIMethod<FLogout>(API_ENDPOINT, "logout");
-
+const logout = adminRPC().method("logout");
 
 export default function LogoutButton() {
   return <Button onClick={e => logout().then(() => window.location.href += "")}>Logout</Button>

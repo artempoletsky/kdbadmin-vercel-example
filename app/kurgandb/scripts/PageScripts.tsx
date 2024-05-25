@@ -1,9 +1,10 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import FunctionComponent from "./FunctionComponent";
 import Log from "./Log";
 import type { ScriptsLogRecord } from "../api/methods";
+import { useStoreEffectSet } from "../store";
 
 
 
@@ -24,11 +25,14 @@ type Props = {
 }
 
 export function formatName(key: string) {
+  if (key.startsWith("confirm")){
+    key = key.slice(8);
+  }
   return key.replaceAll("_", " ");
 }
 
-export default function ScriptsPage({ scripts }: Props) {
-
+export default function PageScripts({ scripts }: Props) {
+  useStoreEffectSet("tableName", "");
   const [log, setLog] = useState<ScriptsLogRecord[]>([]);
   function onLog(record: ScriptsLogRecord) {
     setLog(log => log.concat(record));
@@ -47,7 +51,15 @@ export default function ScriptsPage({ scripts }: Props) {
         items.push(printGroup(item.children, newPath, key));
       } else {
         if (item.fun) {
-          items.push(<FunctionComponent onLog={onLog} className="mb-3" key={newPath} {...item.fun} path={newPath} name={formatName(key)} />);
+          items.push(<FunctionComponent
+            onLog={onLog}
+            className="mb-3"
+            key={newPath}
+            {...item.fun}
+            path={newPath}
+            name={formatName(key)}
+            confirm={key.startsWith("confirm_")}
+          />);
         } else {
           items.push(<div key={newPath} className="mb-3 text-red-600">Failed to parse function: &#39;{newPath}&#39;</div>);
         }

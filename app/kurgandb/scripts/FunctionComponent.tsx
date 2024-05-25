@@ -1,31 +1,31 @@
 "use client";
 
 import { Button, TextInput } from "@mantine/core";
-import { API_ENDPOINT, ROOT_PATH } from "../generated";
-import { fetchCatch, getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FExecuteScript, ScriptsLogRecord } from "../api/methods";
+import { fetchCatch } from "@artempoletsky/easyrpc/react";
+import type { ScriptsLogRecord } from "../api/methods";
 import { useRef } from "react";
-import { invalidate } from "../comp/Link";
-import { useRouter } from "next/navigation";
-import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
-import { formatName } from "./ScriptsPage";
+import { formatName } from "./PageScripts";
+import { adminRPC } from "../globals";
 
-const executeScript = getAPIMethod<FExecuteScript>(API_ENDPOINT, "executeScript");
-
+const executeScript = adminRPC().method("executeScript")
 
 type Props = {
-  description: string
-  args: string[]
-  path: string
-  name: string
-  className?: string
-  onLog: (args: ScriptsLogRecord) => void
+  description: string;
+  args: string[];
+  path: string;
+  name: string;
+  className?: string;
+  onLog: (args: ScriptsLogRecord) => void;
+  confirm?: boolean;
 }
 
-export default function FunctionComponent({ className, description, args, path, name, onLog }: Props) {
+export default function FunctionComponent({ className, description, args, path, name, onLog, confirm: useConfirm }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   const onExecuteClick = fetchCatch({
+    async confirm() {
+      return !useConfirm || confirm("Are you sure you want to execute this script?");
+    },
     method: executeScript,
     before: () => {
       const form = formRef.current;

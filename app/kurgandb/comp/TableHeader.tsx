@@ -1,17 +1,16 @@
 "use client";
 
-import { fetchCatch, getAPIMethod } from "@artempoletsky/easyrpc/client";
-import { ActionIcon, Button, Tooltip } from "@mantine/core";
+import { fetchCatch } from "@artempoletsky/easyrpc/react";
+import { ActionIcon, Tooltip } from "@mantine/core";
 import Link from "next/link";
-import { API_ENDPOINT, ROOT_PATH } from "../generated";
-import type { FRemoveTable } from "../api/methods";
+import { ROOT_PATH } from "../generated";
 
-import { AirBalloon, Alarm, Asset, Edit, FileDatabase, Trash, ZoomExclamation } from 'tabler-icons-react';
+import { Alarm, Asset, Edit, FileDatabase, Trash, ZoomExclamation } from 'tabler-icons-react';
 import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { adminRPC } from "../globals";
 
-const removeTable = getAPIMethod<FRemoveTable>(API_ENDPOINT, "removeTable");
-
+const removeTable = adminRPC().method("removeTable");
 type Props = {
   tableName: string
 }
@@ -30,7 +29,7 @@ export default function TableHeader({ tableName }: Props) {
     {
       label: "Edit records",
       icon: <FileDatabase />,
-      href: `/${ROOT_PATH}/${tableName}`,
+      href: `/${ROOT_PATH}/${tableName}/records`,
     },
     {
       label: "Edit scheme",

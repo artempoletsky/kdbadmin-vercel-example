@@ -1,12 +1,8 @@
 
-import { getAPIMethod } from "@artempoletsky/easyrpc/client";
-import type { FExapleCustomMethod } from "./api";
-import { API_ENDPOINT } from "../kurgandb/generated";
-import { FieldScriptsObject } from "../kurgandb/globals";
+import { FieldScriptsObject, adminRPCCustom } from "../kurgandb/globals";
 import { encodePassword } from "@artempoletsky/kurgandb/globals";
 
-
-const exampleCustomMethod = getAPIMethod<FExapleCustomMethod>(API_ENDPOINT, "exampleCustomMethod");
+const exampleCustomMethod = adminRPCCustom().method("exampleCustomMethod");
 
 type UserFull = { username: string, password: string };
 export const fieldScripts: FieldScriptsObject = {
@@ -26,6 +22,11 @@ export const fieldScripts: FieldScriptsObject = {
     password: {
       Encode(record: UserFull) {
         record.password = encodePassword(record.password);
+      }
+    },
+    data: {
+      Test123123() {
+
       }
     }
   }

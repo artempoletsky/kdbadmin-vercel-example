@@ -50,8 +50,8 @@ export const Next_routes = {
 }
 
 export const Project_setup = {
-  async Generate_globals_and_db_files() {
-    // Generate globals.ts and db.ts according to your database structure
+  async Generate_globals_db_and_rpc_files() {
+    // Generate globals.ts, db.ts and rpc.ts according to your database structure
 
     return await generateDB();
   },
@@ -119,5 +119,17 @@ export const Miscellaneous = {
     if (!First_argument) First_argument = "Cow";
     if (!Second_argument) Second_argument = "Hello";
     return `${First_argument} says ${Second_argument}!`;
+  },
+
+  async Install_NPM_package(Package_name: string) {
+    return await query(async ({ }, { name }, { db }) => {
+      return await db.npmInstall(name);
+    }, { name: Package_name });
+  },
+
+  async Uninstall_NPM_package(Package_name: string) {
+    return await query(({ }, { name }, { db }) => {
+      return db.npmUninstall(name);
+    }, { name: Package_name });
   },
 }

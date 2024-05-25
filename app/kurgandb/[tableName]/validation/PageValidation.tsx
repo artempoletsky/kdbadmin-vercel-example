@@ -1,23 +1,22 @@
 "use client";
 
-import { fetchCatch, getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
-import { ReactNode, useState } from "react";
-import { ActionIcon, Button } from "@mantine/core";
-import type { FGetInvalidRecords, FSetCurrentTableValidator, FUnsetCurrentTableValidator, RGetTableValidation, RUpdateValidationPage } from "../../api/methods";
-import { API_ENDPOINT, ROOT_PATH } from "../../generated";
-import { Trash } from "tabler-icons-react";
-import { ParsedFunction } from "@artempoletsky/kurgandb/function";
+import { fetchCatch, useErrorResponse } from "@artempoletsky/easyrpc/react";
+import { useState } from "react";
+import { Button } from "@mantine/core";
+import type { RGetTableValidation, RUpdateValidationPage } from "../../api/methods";
+import { ROOT_PATH } from "../../generated";
 import { ParsedFunctionComponent } from "../../comp/ParsedFunctionComponent";
 import type { PlainObject } from "@artempoletsky/kurgandb/globals";
 import type { ATableOnly } from "../../api/schemas";
 import { LightRecordDetails } from "./LigthRecordDetails";
-import css from "../../admin.module.css";
 import Link from "../../comp/Link";
+import { adminRPC } from "../../globals";
 
-const setCurrentTableValidator = getAPIMethod<FSetCurrentTableValidator>(API_ENDPOINT, "setCurrentTableValidator");
-const unsetCurrentTableValidator = getAPIMethod<FUnsetCurrentTableValidator>(API_ENDPOINT, "unsetCurrentTableValidator");
-const getInvalidRecords = getAPIMethod<FGetInvalidRecords>(API_ENDPOINT, "getInvalidRecords");
-
+const {
+  setCurrentTableValidator,
+  unsetCurrentTableValidator,
+  getInvalidRecords,
+} = adminRPC().methods("setCurrentTableValidator", "unsetCurrentTableValidator", "getInvalidRecords");
 
 
 type Props = RGetTableValidation & ATableOnly;
@@ -57,15 +56,15 @@ export default function TestComponent({
   return (
     <div className="">
       <div className="flex mb-10">
-        <div className={css.col_l}>
+        <div className="col_l">
           {adminValidator
             ? <div className="">
-              <p className={css.h2}>Admin validator:</p>
+              <p className="h2">Admin validator:</p>
               <Button onClick={doSet}>Activate</Button>
               <ParsedFunctionComponent {...adminValidator} />
             </div>
             : <div className="">
-              <p className={css.h2}>No admin validator specified</p>
+              <p className="h2">No admin validator specified</p>
               <p className="">Add a validator to /app/kurgandb_admin/validation.ts like this:</p>
               <p className="whitespace-pre mt-2 p-3 bg-slate-800 text-gray-100">
                 {`export const ${tableName}: RecordValidator = (${tableName}, { z }) => {
@@ -80,18 +79,18 @@ export default function TestComponent({
             </div>
           }
         </div>
-        <div className={css.col_r}>
-          <p className={css.h2}>Current validator:</p>
+        <div className="col_r">
+          <p className="h2">Current validator:</p>
           <ParsedFunctionComponent onRemoveClick={doUnset} name="Current validator" {...currentValidator} />
         </div>
       </div>
       {invalidRecords.length
         ? <div className="">
-          <div className={css.h3}>The table has invalid records:</div>
-          <div className="mb-1 mt-2"><Link href={`/${ROOT_PATH}/${tableName}#q=t.filter($.invalid)`}>Edit records</Link></div>
+          <div className="h3">The table has invalid records:</div>
+          <div className="mb-1 mt-2"><Link href={`/${ROOT_PATH}/${tableName}/records#q=t.filter($.invalid)`}>Edit records</Link></div>
           {invalidRecords.map(rec => <LightRecordDetails key={rec[primaryKey]} record={rec} primaryKey={primaryKey} />)}
         </div>
-        : <div className={css.h3}>All records are valid</div>}
+        : <div className="h3">All records are valid</div>}
       <div className="text-red-600 min-h-[24px]">{mainErrorMessage}</div>
 
     </div>

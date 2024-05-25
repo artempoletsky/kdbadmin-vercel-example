@@ -2,28 +2,28 @@
 
 import Paginator from "../../comp/paginator";
 import EditDocumentForm from "./EditDocumentForm";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { FGetDraft, FGetFreeId, FQueryRecords, FGetScheme, FReadDocument, RQueryRecords, RGetSchemePage } from "../../api/methods";
-import { fetchCatch, getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
+import { useEffect, useState } from "react";
+import type { RQueryRecords, RGetSchemePage } from "../../api/methods";
+
 import type { TableScheme } from "@artempoletsky/kurgandb/globals";
 import { Button, Textarea } from "@mantine/core";
 import RequestError from "../../comp/RequestError";
-import { API_ENDPOINT } from "../../generated";
-import css from "../../admin.module.css";
 
 import { PlainObject } from "@artempoletsky/kurgandb/globals";
 import type { AQueryRecords, ATableOnly } from "../../api/schemas";
 import ComponentLoader, { Mutator } from "../../comp/ComponentLoader";
 import RecordsList from "./RecordsList";
+import { fetchCatch, useErrorResponse } from "@artempoletsky/easyrpc/react";
+import { adminRPC } from "../../globals";
+import { useStore } from "../../store";
 
 
-
-const readDocument = getAPIMethod<FReadDocument>(API_ENDPOINT, "readDocument");
-const queryRecords = "queryRecords" as unknown as FQueryRecords;
-// getAPIMethod<FQueryRecords>(API_ENDPOINT, "queryRecords");
-const getDraft = getAPIMethod<FGetDraft>(API_ENDPOINT, "getDraft");
-const getFreeId = getAPIMethod<FGetFreeId>(API_ENDPOINT, "getFreeId");
-
+const {
+  readDocument,
+  // queryRecords,
+  getDraft,
+  getFreeId,
+} = adminRPC().methods("readDocument", "queryRecords", "getDraft", "getFreeId");
 
 type Props = ATableOnly & RGetSchemePage;
 
@@ -47,31 +47,36 @@ function getSchemeProps(scheme?: TableScheme) {
 }
 
 export default function PageEditRecords({ tableName, scheme }: Props) {
-
+  // Store.setBreadcrumbs([
+  //   { href: "/", title: "Tables" },
+  //   { href: "", title: tableName },
+  // ]);
 
   const [record, setRecord] = useState<PlainObject | undefined>(undefined);
   const [currentId, setCurrentId] = useState<string | number | undefined>(undefined);
   const [pageData, setPageData] = useState<RQueryRecords | undefined>(undefined);
   // const [page, setPage] = useState<number>(1);
 
+
   const queryDefault = "table.all()";
+  const [queryString, setQueryString] = useStore("queryString");
 
   const { autoincId, primaryKey } = getSchemeProps(scheme);
 
   // let [queryString, setQueryString] = useState<string>(queryDefault);
 
-  const queryInput = useRef<HTMLTextAreaElement>(null);
+  // const queryInput = useRef<HTMLTextAreaElement>(null);
   let [insertMode, setInsertMode] = useState<boolean>(false);
 
-  const [setRequestError, , requestError] = useErrorResponse();
+  // const [setRequestError, , requestError] = useErrorResponse();
 
   const fc = fetchCatch({
     before: () => ({ tableName }),
-    errorCatcher: setRequestError,
   });
 
+  const { errorSetter: setRequestError, errorResponse } = fc.useCatch();
+
   const fcOpenRecord = fc.method(readDocument)
-    .catch(setRequestError)
     .before((id: string | number) => {
       setCurrentId(id);
       return {
@@ -89,12 +94,13 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
     fcOpenRecord.action(id)();
   }
 
-  const loadPage = useCallback((page: number) => {
+  const loadPage = (page: number) => {
     setRequestError();
     setRecord(undefined);
     // setPage(page);
 
-    const queryString = !queryInput.current ? queryDefault : queryInput.current.value;
+    // const queryString = !queryInput.current ? queryDefault : queryInput.current.value;
+
     if (queryString != queryDefault) {
       window.location.hash = "#q=" + queryString;
     } else {
@@ -112,7 +118,7 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
     //   tableName
     // }).then(setPageData)
     //   .catch(setRequestError);
-  }, [tableName, setRequestError])
+  };
   // function loadPage() {
 
   // }
@@ -122,8 +128,21 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
       setInsertMode(true);
     });
 
-  function onDocCreated() {
-    loadPage(queryArgs.page);
+  function onDocDeleted() {
+    loadPage(queryArgs!.page);
+    setRecord(undefined);
+  }
+
+  function onDocCreated(id: string | number) {
+    // loadPage(queryArgs!.page);
+    const idStr = typeof id == "string" ? `"${id}"` : id + "";
+    const queryString = `t.where("${primaryKey}", ${idStr})`;
+    setQueryString(queryString)
+    setQueryArgs({
+      page: 1,
+      tableName,
+      queryString,
+    });
     setRecord(undefined);
   }
 
@@ -146,7 +165,6 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
     });
 
   useEffect(() => {
-
     try {
       const locationFull = window.location.hash;
       const decodedURI = decodeURI(locationFull);
@@ -158,38 +176,38 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
       const userQuery = q && (q);
 
 
-      if (userQuery && queryInput.current) {
-        queryInput.current.innerHTML = userQuery;
-        queryInput.current.value = userQuery;
+      if (userQuery) {
+        setQueryString(userQuery);
+        setQueryArgs({
+          page: 1,
+          queryString: userQuery,
+          tableName,
+        });
+      } else {
+        setQueryString(queryDefault);
+        setQueryArgs({
+          page: 1,
+          queryString: queryDefault,
+          tableName,
+        });
       }
     } catch (err) {
       console.log(err);
     }
 
-    loadPage(1);
 
-  }, [loadPage]);
-
-
+  }, [tableName]);
 
   function onClose() {
+    setCurrentId(undefined);
     setRecord(undefined);
   }
   const getInvalidRecordsRequest = `t.filter($.invalid)`;
   const whereRequest = `t.where("${"id"}", "new_id")`;
   const startsWith = `t.where("${"id"}", value => value.startsWith("a"))`;
 
-  function setQuery(string: string) {
-    if (!queryInput.current) throw new Error("Error");
 
-    queryInput.current.value = string;
-  }
-
-  const [queryArgs, setQueryArgs] = useState<AQueryRecords>({
-    page: 1,
-    tableName,
-    queryString: queryDefault,
-  });
+  const [queryArgs, setQueryArgs] = useState<AQueryRecords | null>(null);
   const mutator = new Mutator<RQueryRecords>();
   function onUpdateId(oldId: string | number, newId: string | number) {
     if (!pageData) throw new Error("no page data");
@@ -208,33 +226,36 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
     <div>
       <div className="mt-3 mb-1 flex gap-1">
         <div className="">
-          <Textarea defaultValue={queryDefault} className="min-w-[500px]" resize="vertical" ref={queryInput} />
+          <Textarea value={queryString}
+            onChange={e => setQueryString(e.target.value)}
+            className="min-w-[500px]"
+            resize="vertical"
+          />
           <div className="flex gap-3 mt-2">
-            <i onClick={e => setQuery(queryDefault)}
-              className={css.pseudo}>All</i>
-            <i onClick={e => setQuery(whereRequest)}
-              className={css.pseudo}>Where</i>
-            <i onClick={e => setQuery(startsWith)}
-              className={css.pseudo}>Stars with</i>
-            <i onClick={e => setQuery(getInvalidRecordsRequest)}
-              className={css.pseudo}>Invalid</i>
+            <i onClick={e => setQueryString(queryDefault)}
+              className="pseudo">All</i>
+            <i onClick={e => setQueryString(startsWith)}
+              className="pseudo">Stars with</i>
+            <i onClick={e => setQueryString(getInvalidRecordsRequest)}
+              className="pseudo">Invalid</i>
           </div>
         </div>
         <Button className="align-top" onClick={e => loadPage(1)}>Select</Button>
         <div className="border-l border-gray-500 mx-3 h-[34px]"></div>
         <Button className="align-top" onClick={fcInsert.action()}>New record</Button>
         <div className="grow ml-3">
-          <RequestError requestError={requestError} />
+          <RequestError requestError={errorResponse} />
         </div>
       </div>
       <div className="">
         <div className="flex">
           <ComponentLoader
             Component={RecordsList}
-            method={queryRecords}
+            method={adminRPC().hack("queryRecords")}
             args={queryArgs}
             onData={setPageData}
             props={{
+              current: currentId,
               onRecordSelect: openDocument
             }}
             mutator={mutator}
@@ -251,13 +272,13 @@ export default function PageEditRecords({ tableName, scheme }: Props) {
             tableName={tableName}
             scheme={scheme}
             record={record}
-            onDeleted={onDocCreated}
+            onDeleted={onDocDeleted}
             onCreated={onDocCreated}
             onDuplicate={fcOnDuplicate.action()}
             onRequestError={setRequestError}
           />}
         </div>
-        {pageData && <Paginator page={queryArgs.page} pagesCount={pageData.pagesCount} onSetPage={loadPage}></Paginator>}
+        {pageData && <Paginator page={queryArgs!.page} pagesCount={pageData.pagesCount} onSetPage={loadPage}></Paginator>}
       </div>
 
     </div>

@@ -11,7 +11,11 @@ import { JSONErrorResponse } from "@artempoletsky/easyrpc/client";
 
 export const POST = async function name(request: NextRequest) {
   const req: APIRequest = await request.json();
-  if (!isAdmin() && req.method !== "authorize") {
+  let bIsAdmin = await isAdmin();
+  if (bIsAdmin === undefined) {
+    bIsAdmin = true;
+  }
+  if (!bIsAdmin && req.method !== "authorize") {
     const err: JSONErrorResponse = {
       message: "You must authorize to perform this action",
       preferredErrorDisplay: "form",
@@ -28,7 +32,7 @@ export const POST = async function name(request: NextRequest) {
   let result, status;
 
   // console.log(Object.keys(schemas).length, Object.keys(schemas));
-  
+
   [result, status] = await validate(req, {
     ...schemas,
     ...customRules,

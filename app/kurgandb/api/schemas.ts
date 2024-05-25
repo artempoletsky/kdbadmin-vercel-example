@@ -185,3 +185,9 @@ export const getTableValidation = ZTableOnly;
 export const setCurrentTableValidator = ZTableOnly;
 export const unsetCurrentTableValidator = ZTableOnly;
 export const getInvalidRecords = ZTableOnly;
+export const getPlugins = ZEmpty;
+
+export const togglePlugin = z.object({
+  pluginName: ZStringNonEmpty
+});
+export type ATogglePlugin = z.infer<typeof togglePlugin>;

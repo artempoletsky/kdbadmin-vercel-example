@@ -19,8 +19,6 @@ export default function CreateNewField(props: Props) {
   const [isHeavy, setIsHeavy] = useState(false);
 
 
-
-
   function onClick() {
     setFieldName("");
     onAddField({
@@ -31,9 +29,9 @@ export default function CreateNewField(props: Props) {
     });
   }
   // const setRequestError = useMantineRequestError(form);
-  return <div className="mt-3">
-    <p className="mb-1">Add a new field:</p>
-    <div className="flex gap-1 border-b border-slate-800">
+  return <div className="ml-3 mr-3">
+    <p className="mb-1">Create a new field:</p>
+    <div className="w-[350px]">
       <TextInput
         name="fieldName"
         autoComplete="off"
@@ -41,21 +39,24 @@ export default function CreateNewField(props: Props) {
         placeholder="field name" value={fieldName}
         onChange={e => setFieldName(e.target.value)}
       />
-      <Select value={type} data={FieldTypes} onChange={e => setFieldType(e as FieldType)} />
-      <Tooltip label="Store this field as a separate file on each record">
-        <div className="pt-2 mr-2">
-          <Checkbox
-            checked={isHeavy}
-            onChange={e => setIsHeavy(e.target.checked)}
-            classNames={{
-              label: "cursor-help",
-              input: "cursor-help",
-            }}
-            label="heavy"
-          />
-        </div>
-      </Tooltip>
-      <Button onClick={onClick}>Add</Button>
+      <Select className="mb-3" allowDeselect={false} value={type} data={FieldTypes} onChange={e => setFieldType(e as FieldType)} />
+      <div className="pt-2 mb-3">
+        <Tooltip label="Store this field as a separate file on each record">
+          <span>
+            <Checkbox
+              checked={isHeavy}
+              onChange={e => setIsHeavy(e.target.checked)}
+              classNames={{
+                root: "inline-block",
+                label: "cursor-help",
+                input: "cursor-help",
+              }}
+              label="heavy"
+            />
+          </span>
+        </Tooltip>
+      </div>
+      <Button onClick={onClick}>Create</Button>
     </div>
   </div>
 }

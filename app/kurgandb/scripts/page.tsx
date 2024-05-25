@@ -1,13 +1,12 @@
 
 
-import Layout, { BreadrumbsArray } from "../comp/PageLayout";
 
 import * as scriptsRaw from "../../kurgandb_admin/scripts";
 
-import ScriptsPage, { Group, ParsedFunction as ParsedFunctionClient } from "./ScriptsPage";
+import PageScripts, { Group, ParsedFunction as ParsedFunctionClient } from "./PageScripts";
 import { PlainObject } from "@artempoletsky/kurgandb/globals";
 import { parseFunction, ParsedFunction } from "@artempoletsky/kurgandb/function";
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 function prepareFunction(f: Function): ParsedFunctionClient | false {
   const { body, args, isAsync } = parseFunction(f);
@@ -19,7 +18,7 @@ function prepareFunction(f: Function): ParsedFunctionClient | false {
       description = descMatched[1];
     }
   }
-  
+
   return {
     args: args,
     description,
@@ -47,15 +46,7 @@ const scripts: Group = createGroup(scriptsRaw);
 
 export default async function page() {
 
-  const crumbs: BreadrumbsArray = [
-    { href: "/", title: "Tables" },
-    { href: "", title: "Scripts" },
-  ];
-
-
   return (
-    <Layout breadcrumbs={crumbs}>
-      <ScriptsPage scripts={scripts} />
-    </Layout>
+    <PageScripts scripts={scripts} />
   );
 }

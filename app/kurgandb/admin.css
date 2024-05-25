@@ -1,3 +1,12 @@
+@tailwind components;
+@tailwind utilities;
+
+
+@layer tailwind {
+  @tailwind base;
+}
+
+
 @layer admin {
 
   .h2 {
@@ -24,9 +33,13 @@
   }
 
   .sidebar_li {
-    @apply cursor-pointer py-1 border-b border-gray-500;
+    @apply cursor-pointer py-1 border-b border-gray-500 pl-1;
     min-height: 34px;
     white-space: pre;
+  }
+
+  .sidebar_li.current {
+    @apply bg-slate-500 text-white;
   }
 
   .pseudo {

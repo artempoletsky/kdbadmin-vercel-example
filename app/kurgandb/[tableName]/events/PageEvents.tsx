@@ -1,16 +1,14 @@
 "use client";
 
-import { fetchCatch, getAPIMethod, useErrorResponse } from "@artempoletsky/easyrpc/client";
-import { ReactNode, useEffect, useState } from "react";
+import { useErrorResponse, fetchCatch } from "@artempoletsky/easyrpc/react";
+import { ReactNode, useState } from "react";
 import { RegisteredEvents } from "@artempoletsky/kurgandb/globals";
-import { ActionIcon, Button } from "@mantine/core";
-import { FGetTableEvents, FToggleAdminEvent, FUnregisterEvent } from "../../api/methods";
-import { API_ENDPOINT } from "../../generated";
-import { Trash } from "tabler-icons-react";
+import { Button } from "@mantine/core";
+import { ParsedFunctionComponent } from "../../comp/ParsedFunctionComponent";
 
-const toggleAdminEvent = getAPIMethod<FToggleAdminEvent>(API_ENDPOINT, "toggleAdminEvent");
-const unregisterEvent = getAPIMethod<FUnregisterEvent>(API_ENDPOINT, "unregisterEvent");
+import { adminRPC } from "../../globals";
 
+const { toggleAdminEvent, unregisterEvent } = adminRPC().methods("toggleAdminEvent", "unregisterEvent");
 
 type Props = {
   tableName: string;
@@ -19,47 +17,45 @@ type Props = {
 };
 
 export default function TestComponent({ tableName, registeredEvents: initialRegisteredEvents, adminEvents }: Props) {
-  
+
   const [registeredEvents, setRegisteredEvents] = useState(initialRegisteredEvents);
-  const [setErrorResponse, mainErrorMessage, errorResponse] = useErrorResponse();
+  // const [setErrorResponse, mainErrorMessage, errorResponse] = useErrorResponse();
 
+  const fc = fetchCatch(toggleAdminEvent).then(setRegisteredEvents);
+  const { errorMessage: mainErrorMessage } = fc.useCatch();
 
-  const fcToggle = fetchCatch(toggleAdminEvent)
-    .before((eventName) => {
+  const fcToggle = fc
+    .before((eventName: string) => {
       return {
         eventName,
         tableName,
       }
-    })
-    .then(setRegisteredEvents)
-    .catch(setErrorResponse);
+    });
 
-  const fcUnregister = fetchCatch(unregisterEvent)
-    .before((eventName, namespaceId) => {
-      if (!confirm("Are you sure you want to unregister this event?")) return;
-
-      return {
-        tableName,
-        eventName,
-        namespaceId,
-      }
+  const fcUnregister = fc.method(unregisterEvent)
+    .confirm(async () => {
+      return confirm("Are you sure you want to unregister this event?");
     })
-    .then(setRegisteredEvents)
-    .catch(setErrorResponse)
+    .before<{
+      eventName: string;
+      namespaceId: string;
+    }>(({ eventName, namespaceId }) => ({
+      tableName,
+      eventName,
+      namespaceId,
+    }));
 
   const registeredGroups: ReactNode[] = [];
   for (const namespaceId in registeredEvents) {
     const events: ReactNode[] = [];
     for (const eventName in registeredEvents[namespaceId]) {
-      const fun = registeredEvents[namespaceId][eventName];
+      const fn = registeredEvents[namespaceId][eventName];
 
-      events.push(<details key={namespaceId + eventName} className="">
-        <summary>{eventName}  <ActionIcon className="relative top-[3px]" size="xs" onClick={fcUnregister.action(eventName, namespaceId)}><Trash /></ActionIcon></summary>
-        {fun.args}<br />
-        <p className="whitespace-pre">
-          {fun.body}
-        </p>
-      </details>)
+      events.push(<ParsedFunctionComponent
+        name={eventName}
+        {...fn}
+        onRemoveClick={fcUnregister.action({ eventName, namespaceId })}
+      />)
     }
     registeredGroups.push(<div className="pl-3 border-l border-stone-500" key={namespaceId}>
       <p className="">{namespaceId}</p>
